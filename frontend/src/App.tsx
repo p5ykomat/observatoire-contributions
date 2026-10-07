@@ -307,7 +307,15 @@ export default function App() {
     );
   }
   const result = useMemo(() => aggregate(s), [s]),
-    fallbackCount = s.cohort.filter((account) =>
+    retainedAccounts = result.rows
+      .filter((row) => row.included)
+      .map((row) => row.account),
+    processedAccounts = retainedAccounts.filter((a) =>
+      ["completed_primary", "completed_fallback", "partial", "failed"].includes(
+        a.technical,
+      ),
+    ).length,
+    fallbackCount = retainedAccounts.filter((account) =>
       account.providers.includes("fallback"),
     ).length,
     activeCollection = busy && s.stage === 3,
@@ -837,31 +845,22 @@ export default function App() {
               {t("categories")} :{" "}
               {s.params.categories.map((c) => t("category." + c)).join(", ")}
             </p>
+            <p className="hint">
+              {t("collectionSelection", {
+                retained: retainedAccounts.length,
+                imported: s.cohort.length,
+              })}
+            </p>
             <p role="status">
               {t("progress", {
-                done: s.cohort.filter((a) =>
-                  [
-                    "completed_primary",
-                    "completed_fallback",
-                    "partial",
-                    "failed",
-                  ].includes(a.technical),
-                ).length,
-                total: s.cohort.length,
+                done: processedAccounts,
+                total: retainedAccounts.length,
               })}
             </p>
             <progress
-              max={s.cohort.length}
-              value={
-                s.cohort.filter((a) =>
-                  [
-                    "completed_primary",
-                    "completed_fallback",
-                    "partial",
-                    "failed",
-                  ].includes(a.technical),
-                ).length
-              }
+              aria-label={t("steps.2")}
+              max={retainedAccounts.length}
+              value={processedAccounts}
             />
             <div className="kpis">
               {[
@@ -876,7 +875,7 @@ export default function App() {
                 <div key={k}>
                   <span>{t("technical." + k)}</span>
                   <strong>
-                    {s.cohort.filter((a) => a.technical === k).length}
+                    {retainedAccounts.filter((a) => a.technical === k).length}
                   </strong>
                 </div>
               ))}

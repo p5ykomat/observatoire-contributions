@@ -161,6 +161,134 @@ async function analyzed(page: Page) {
   ).toBeVisible();
   await page.getByRole("button", { name: "Aujourd’hui", exact: true }).click();
 }
+
+test("la collecte interroge les 13 nouveaux comptes retenus puis complète seulement les comptes ajoutés", async ({
+  page,
+}) => {
+  await mocks(page, 350);
+  await page.route("**/api/qualify", async (route) => {
+    const names = route.request().postDataJSON().usernames as string[];
+    await route.fulfill({
+      json: names.map((username) => ({
+        username,
+        registration:
+          Number(username.slice(6)) < 13
+            ? "2026-04-03T00:00:00Z"
+            : "2025-12-24T00:00:00Z",
+        exists: true,
+        bot: false,
+        groups: [],
+      })),
+    });
+  });
+  await page.goto("/");
+  await page
+    .getByLabel("Noms d’utilisateur, un par ligne")
+    .fill(
+      Array.from({ length: 18 }, (_, index) => `Compte${index}`).join("\n"),
+    );
+  await page
+    .getByRole("button", { name: "Importer la cohorte", exact: true })
+    .click();
+  for (const index of [15, 16, 17])
+    await page.getByLabel(`Exclure Compte${index}`, { exact: true }).check();
+  await page
+    .getByRole("button", {
+      name: "Vérifier les comptes et continuer",
+      exact: true,
+    })
+    .click();
+  await page
+    .getByLabel("Début de l’action", { exact: true })
+    .fill("2026-05-01");
+  await page.getByLabel("Fin de l’action", { exact: true }).fill("2026-07-01");
+  await page
+    .getByLabel("Participants retenus", { exact: true })
+    .selectOption("new");
+  await page
+    .getByLabel("Préréglage de création", { exact: true })
+    .selectOption("custom");
+  await page
+    .getByLabel("Compte créé à partir du", { exact: true })
+    .fill("2026-01-01");
+  await page
+    .getByLabel("Compte créé jusqu’au (inclus)", { exact: true })
+    .fill("2026-06-01");
+  await expect(page.locator(".selection-preview")).toContainText(
+    "13 comptes retenus sur 15 comptes non exclus",
+  );
+  const queried: string[] = [];
+  page.on("request", (request) => {
+    if (new URL(request.url()).pathname === "/api/global-contributions")
+      queried.push(request.postDataJSON().username);
+  });
+  await page
+    .getByRole("button", { name: "Lancer la collecte", exact: true })
+    .click();
+  await expect(
+    page
+      .getByRole("status")
+      .filter({ hasText: "0 / 13 comptes retenus traités" }),
+  ).toBeVisible();
+  await expect(page.getByRole("progressbar")).toHaveAttribute("max", "13");
+  await expect(
+    page.getByText(
+      "La collecte porte sur 13 comptes retenus parmi 18 comptes importés.",
+      { exact: false },
+    ),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Mettre en pause", exact: true }).click();
+  await page.screenshot({
+    path: "../output/collection-selected-13.png",
+    fullPage: true,
+  });
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: "../output/collection-selected-13-mobile.png",
+    fullPage: true,
+  });
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await page.getByRole("button", { name: "Reprendre la collecte", exact: true }).click();
+  await expect(
+    page.getByRole("heading", {
+      name: "Qui a contribué dans cette période ?",
+      exact: true,
+    }),
+  ).toBeVisible({ timeout: 15000 });
+  expect(queried).toEqual(
+    Array.from({ length: 13 }, (_, index) => `Compte${index}`),
+  );
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page
+    .locator("nav")
+    .getByRole("button", { name: "2 Paramétrer" })
+    .click();
+  await page
+    .getByLabel("Participants retenus", { exact: true })
+    .selectOption("all");
+  await expect(page.locator(".selection-preview")).toContainText(
+    "15 comptes retenus sur 15 comptes non exclus",
+  );
+  await page
+    .getByRole("button", { name: "Lancer la collecte", exact: true })
+    .click();
+  await expect(page.getByRole("progressbar")).toHaveAttribute("max", "15");
+  await expect(
+    page.getByRole("heading", {
+      name: "Qui a contribué dans cette période ?",
+      exact: true,
+    }),
+  ).toBeVisible();
+  expect(queried).toEqual(
+    Array.from({ length: 15 }, (_, index) => `Compte${index}`),
+  );
+});
 test("parcours complet, exclusions, graphiques, exports et recalcul sans réseau", async ({
   page,
 }) => {

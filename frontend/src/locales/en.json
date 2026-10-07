@@ -93,7 +93,8 @@
   "resume": "Resume collection",
   "cancel": "Cancel and view collected data",
   "retry": "Retry incomplete accounts",
-  "progress": "{{done}} / {{total}} accounts analyzed",
+  "progress": "{{done}} / {{total}} included accounts processed",
+  "collectionSelection": "Collection covers {{retained}} included accounts out of {{imported}} imported accounts. Contributions from accounts outside the selection are not collected.",
   "technical": {
     "pending": "Pending",
     "running": "Running",

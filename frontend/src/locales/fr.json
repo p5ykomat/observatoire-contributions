@@ -93,7 +93,8 @@
   "resume": "Reprendre la collecte",
   "cancel": "Annuler et consulter les données",
   "retry": "Réessayer les comptes incomplets",
-  "progress": "{{done}} / {{total}} comptes analysés",
+  "progress": "{{done}} / {{total}} comptes retenus traités",
+  "collectionSelection": "La collecte porte sur {{retained}} comptes retenus parmi {{imported}} comptes importés. Les contributions des comptes non retenus ne sont pas collectées.",
   "technical": {
     "pending": "En attente",
     "running": "En cours",

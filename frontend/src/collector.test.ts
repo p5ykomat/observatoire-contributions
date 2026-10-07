@@ -3,9 +3,135 @@ import { Collector } from "./collector";
 import { emptySession } from "./types";
 import { importNames } from "./imports";
 import { signature } from "./analysis/cohorts";
+import { aggregate } from "./analysis/aggregation";
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
+});
+
+it.each(["all", "origin", "custom"] as const)(
+  "%s : seuls les 13 nouveaux comptes retenus sur 18 sont interrogés",
+  async (scope) => {
+    const s = session();
+    s.params = {
+      ...s.params,
+      start: "2026-05-01",
+      end: "2026-07-01",
+      reference: "2026-10-07",
+      selection: "new",
+      creation_range: { start: "2026-01-01", end: "2026-06-01" },
+      scope,
+      projects: scope === "custom" ? ["frwiki"] : [],
+    };
+    s.cohort = importNames(
+      Array.from({ length: 18 }, (_, index) => `Compte${index}`).join("\n"),
+    ).accounts.map((a, index) => ({
+      ...a,
+      included: index < 15,
+      staff: index >= 15,
+      qualified: true,
+      exists: true,
+      registration:
+        index < 13 ? "2026-04-03T12:00:00Z" : "2025-12-24T00:00:00Z",
+    }));
+    const queried: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init: RequestInit) => {
+        const body = JSON.parse(init.body as string);
+        queried.push(...(body.usernames ?? [body.username]));
+        if (url.includes("local-accounts"))
+          return Response.json({ merged: [{ wiki: "frwiki", editcount: 1 }] });
+        return Response.json({ rows: [], contributions: [], cursor: null });
+      }),
+    );
+    const collector = new Collector(s, () => {});
+    await collector.prepare();
+    expect(new Set(s.queue.flatMap((task) => task.usernames))).toEqual(
+      new Set(s.cohort.slice(0, 13).map((a) => a.username)),
+    );
+    await collector.run();
+    expect(new Set(queried)).toEqual(
+      new Set(s.cohort.slice(0, 13).map((a) => a.username)),
+    );
+    expect(s.cohort.slice(13).every((a) => !a.post_complete)).toBe(true);
+    expect(aggregate(s).n).toBe(13);
+    expect(aggregate(s).complete).toBe(true);
+  },
+);
+
+it("une ancienne file est filtrée sans partager son curseur avec un compte ajouté", async () => {
+  const s = session();
+  s.params.scope = "custom";
+  s.params.projects = ["frwiki"];
+  s.collection_signature = signature(s.params);
+  s.cohort[1].included = false;
+  s.cohort.push({ ...s.cohort[0], username: "Carol" });
+  s.queue = [
+    {
+      provider: "mediawiki",
+      usernames: ["Alice", "Bob"],
+      project: "frwiki",
+      cursor: "next",
+      attempts: 0,
+    },
+  ];
+  const fetch = vi.fn(async (url: string, init: RequestInit) => {
+    expect(url).toContain("local-accounts");
+    expect(JSON.parse(init.body as string)).toEqual({ usernames: ["Carol"] });
+    return Response.json({ merged: [{ wiki: "frwiki", editcount: 1 }] });
+  });
+  vi.stubGlobal("fetch", fetch);
+  await new Collector(s, () => {}).prepare();
+  expect(
+    s.queue.map((task) => ({ names: task.usernames, cursor: task.cursor })),
+  ).toEqual([
+    { names: ["Alice"], cursor: "next" },
+    { names: ["Carol"], cursor: undefined },
+  ]);
+  expect(fetch).toHaveBeenCalledTimes(1);
+  expect(JSON.parse(fetch.mock.calls[0][1].body as string)).toEqual({
+    usernames: ["Carol"],
+  });
+});
+
+it("réintégrer un compte collecte ses données sans réinterroger les comptes terminés", async () => {
+  const s = session();
+  s.cohort[1].included = false;
+  const queried: string[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (_url: string, init: RequestInit) => {
+      queried.push(JSON.parse(init.body as string).username);
+      return Response.json({ rows: [], cursor: null });
+    }),
+  );
+  let collector = new Collector(s, () => {});
+  await collector.prepare();
+  await collector.run();
+  expect(queried).toEqual(["Alice"]);
+  s.cohort[1].included = true;
+  expect(aggregate(s).complete).toBe(false);
+  collector = new Collector(s, () => {});
+  await collector.prepare(true);
+  await collector.run();
+  expect(queried).toEqual(["Alice", "Bob"]);
+  expect(aggregate(s).complete).toBe(true);
+});
+
+it("un changement de dates invalide aussi la couverture des comptes momentanément exclus", async () => {
+  const s = session();
+  s.cohort.forEach((a) => {
+    a.pre_complete = true;
+    a.post_complete = true;
+  });
+  s.cohort[1].included = false;
+  s.params.end = "2021-01-03";
+  await new Collector(s, () => {}).prepare();
+  expect(s.cohort[1].post_complete).toBe(false);
+  s.cohort[1].included = true;
+  await new Collector(s, () => {}).prepare();
+  expect(s.queue.flatMap((task) => task.usernames)).toEqual(["Alice", "Bob"]);
 });
 function session() {
   const s = emptySession();

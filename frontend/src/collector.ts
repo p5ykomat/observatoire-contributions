@@ -1,6 +1,7 @@
 import { api, retry } from "./api";
 import { dateMs, DAY, signature } from "./analysis/cohorts";
 import { classify } from "./analysis/taxonomy";
+import { aggregate } from "./analysis/aggregation";
 import i18n, { isMessage } from "./i18n";
 import {
   type Account,
@@ -154,21 +155,37 @@ export class Collector {
   }
   async prepare(recollect = false) {
     await this.metadata();
-    if (
-      this.session.queue.length &&
-      !recollect &&
-      this.session.collection_signature === signature(this.session.params)
-    )
-      return;
-    const tasks: Task[] = [];
     const p = this.session.params;
+    const sameScope = this.session.collection_signature === signature(p);
+    if (!sameScope) {
+      // The coverage flags belong to the previous dates/projects, including
+      // accounts currently outside the selection that may be included later.
+      this.session.cohort.forEach((a) => {
+        a.pre_complete = false;
+        a.post_complete = false;
+        a.technical = "pending";
+      });
+    }
+    const retained = aggregate(this.session)
+      .rows.filter((row) => row.included)
+      .map((row) => row.account);
+    const names = new Set(retained.map((a) => a.username));
+    const resumed =
+      sameScope && !recollect
+        ? this.session.queue
+            .map((task) => ({
+              ...task,
+              usernames: task.usernames.filter((name) => names.has(name)),
+            }))
+            .filter((task) => task.usernames.length)
+        : [];
+    const queued = new Set(resumed.flatMap((task) => task.usernames));
+    const tasks: Task[] = [];
     const chosen = p.scope === "origin" ? p.origins : p.projects;
-    for (const a of this.session.cohort) {
+    for (const a of retained) {
       if (
-        recollect &&
-        this.session.collection_signature === signature(p) &&
-        a.pre_complete &&
-        a.post_complete
+        (sameScope && a.pre_complete && a.post_complete) ||
+        queued.has(a.username)
       )
         continue;
       if (!a.qualified || a.exists !== true) {
@@ -190,6 +207,7 @@ export class Collector {
       }
       try {
         const locals = await this.local(a.username);
+        if (!a.included) continue;
         for (const project of new Set([...locals, ...chosen]))
           tasks.push({
             provider: "mediawiki",
@@ -223,7 +241,9 @@ export class Collector {
       if (batch) batch.usernames.push(...task.usernames);
       else batches.push(task);
     }
-    this.session.queue = batches;
+    // Keep resumed cursors separate from fresh batches: new accounts must
+    // start at the beginning rather than inherit another account's cursor.
+    this.session.queue = [...resumed, ...batches];
     this.session.collection_signature = signature(p);
     this.session.generated_at = new Date().toISOString();
     this.emit();
@@ -363,9 +383,10 @@ export class Collector {
                 )
               )
                 accounts.forEach((a) => a.warnings.push(i18n.t("partial")));
-              for (const project of locals.filter((id) =>
-                this.session.catalog.some((w) => w.id === id),
-              ))
+              for (const project of (accounts.every((a) => a.included)
+                ? locals
+                : []
+              ).filter((id) => this.session.catalog.some((w) => w.id === id)))
                 this.session.queue.push({
                   provider: "mediawiki",
                   usernames: task.usernames,
