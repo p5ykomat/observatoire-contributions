@@ -1367,24 +1367,27 @@ test("secours XTools affiché une seule fois avec le nombre de comptes", async (
   page,
 }) => {
   await mocks(page);
-  await page.route("**/api/global-contributions", async (route) =>
-    route.fulfill({ status: 404, json: {} }),
-  );
+  const queried: string[] = [];
+  await page.route("**/api/global-contributions", async (route) => {
+    queried.push(route.request().postDataJSON().username);
+    await route.fulfill({ status: 404, json: {} });
+  });
   await analyzed(page);
+  expect(queried).toEqual(["Alice", "Bob"]);
   await expect(
     page
       .getByRole("status")
-      .filter({ hasText: "XTools n’a pas répondu pour 3 comptes" }),
+      .filter({ hasText: "XTools n’a pas répondu pour 2 comptes" }),
   ).toHaveCount(1);
   await expect(
     page
       .getByRole("status")
-      .filter({ hasText: "XTools n’a pas répondu pour 3 comptes" }),
+      .filter({ hasText: "XTools n’a pas répondu pour 2 comptes" }),
   ).toBeVisible();
   await page.getByLabel("Langue", { exact: true }).selectOption("en");
   await expect(
     page
       .getByRole("status")
-      .filter({ hasText: "XTools did not respond for 3 accounts" }),
+      .filter({ hasText: "XTools did not respond for 2 accounts" }),
   ).toHaveCount(1);
 });
