@@ -209,7 +209,12 @@ export function makePDF(s: Session, nominative = false) {
   }
   y += 6;
   table(
-    [t("projects"), t("participants"), t("rate"), t("contributions")],
+    [
+      t("fup.familyColumn"),
+      t("participants"),
+      t("fup.observedRate"),
+      t("contributions"),
+    ],
     r.byFamily.map((f) => [
       family(f.family),
       f.active,

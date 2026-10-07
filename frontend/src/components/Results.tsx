@@ -138,12 +138,16 @@ export function Results({
               </button>
             ))}
           </div>
+          <p className="hint" id="deadline-help">
+            {t("fup.deadlineHelp")}
+          </p>
           <label className="custom-days">
             {t("fup.customDays")}
             <input
               type="number"
               min={1}
               max={36500}
+              aria-describedby="deadline-help"
               value={q.days === "today" ? "" : q.days}
               onChange={(e) => change({ days: Number(e.target.value) })}
             />
@@ -343,35 +347,31 @@ export function Results({
           }))}
         />
       </div>
-      <section className="panel">
-        <h2>{t("fup.projectTable")}</h2>
+      <section className="panel" aria-labelledby="family-balance-title">
+        <h2 id="family-balance-title">{t("fup.projectTable")}</h2>
         <div className="table-scroll">
           <table className="participant-table">
             <thead>
               <tr>
-                <th>{t("projects")}</th>
+                <th>{t("fup.familyColumn")}</th>
                 <th>{t("fup.contributing")}</th>
-                <th>{t("rate")}</th>
-                <th>{t("fup.not_contributing")}</th>
-                <th>{t("fup.unknown")}</th>
+                <th>{t("fup.observedRate")}</th>
               </tr>
             </thead>
             <tbody>
               {r.byFamily.map((f) => (
                 <tr key={f.family}>
-                  <td data-label={t("projects")}>{familyName(f.family)}</td>
+                  <td data-label={t("fup.familyColumn")}>
+                    {familyName(f.family)}
+                  </td>
                   <td data-label={t("fup.contributing")}>{format(f.active)}</td>
-                  <td data-label={t("rate")}>
+                  <td data-label={t("fup.observedRate")}>
                     {f.percent === null
                       ? t("unavailable")
                       : f.percent.toLocaleString(i18n.resolvedLanguage, {
                           maximumFractionDigits: 1,
                         }) + " %"}
                   </td>
-                  <td data-label={t("fup.not_contributing")}>
-                    {format(f.inactive)}
-                  </td>
-                  <td data-label={t("fup.unknown")}>{format(f.unknown)}</td>
                 </tr>
               ))}
             </tbody>

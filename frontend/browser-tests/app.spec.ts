@@ -237,7 +237,9 @@ test("la collecte interroge les 13 nouveaux comptes retenus puis complète seule
       { exact: false },
     ),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Mettre en pause", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Mettre en pause", exact: true })
+    .click();
   await page.screenshot({
     path: "../output/collection-selected-13.png",
     fullPage: true,
@@ -254,7 +256,9 @@ test("la collecte interroge les 13 nouveaux comptes retenus puis complète seule
     fullPage: true,
   });
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
-  await page.getByRole("button", { name: "Reprendre la collecte", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Reprendre la collecte", exact: true })
+    .click();
   await expect(
     page.getByRole("heading", {
       name: "Qui a contribué dans cette période ?",
@@ -1116,6 +1120,80 @@ test("graphiques expliqués, pourcentages avec dénominateurs et groupes retiré
       { exact: false },
     ),
   ).toBeVisible();
+});
+
+test("échéance future expliquée, bilan par famille simplifié et retour à Aujourd’hui", async ({
+  page,
+}) => {
+  await page.clock.setFixedTime(new Date("2021-03-03T12:00:00Z"));
+  await mocks(page);
+  await analyzed(page);
+  await page.getByRole("button", { name: "J+120", exact: true }).click();
+  const help = page.locator("#deadline-help");
+  await expect(help).toContainText("Ce n’est pas une erreur");
+  await expect(help).toContainText("Choisissez « Aujourd’hui »");
+  expect(
+    await help.evaluate((element) =>
+      element.previousElementSibling?.classList.contains("deadline-buttons"),
+    ),
+  ).toBe(true);
+  await expect(
+    page.getByText("La période choisie se termine le 2021-05-02", {
+      exact: false,
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("sans bilan définitif à cette échéance", { exact: false }),
+  ).toBeVisible();
+  const family = page.locator(
+    'section[aria-labelledby="family-balance-title"]',
+  );
+  await expect(family.getByRole("columnheader")).toHaveText([
+    "Famille de projets",
+    "A contribué",
+    "Part observée",
+  ]);
+  await expect(family.getByText("Données insuffisantes")).toHaveCount(0);
+  await expect(
+    family.getByText("Aucune contribution dans la période"),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "Aujourd’hui", exact: true }).click();
+  await expect(
+    page.getByText("2 personnes sur 2 ont fait au moins une modification", {
+      exact: false,
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("La période choisie se termine le", { exact: false }),
+  ).toHaveCount(0);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await mkdir("../output", { recursive: true });
+  await page.screenshot({
+    path: "../output/results-deadline-desktop.png",
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 320, height: 900 });
+  await expect
+    .poll(() =>
+      page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+    )
+    .toBe(true);
+  await page.getByLabel("Langue", { exact: true }).selectOption("en");
+  await expect(help).toContainText("This is not an error");
+  await expect(family.getByRole("columnheader")).toHaveText([
+    "Project family",
+    "Contributed",
+    "Observed share",
+  ]);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await page.screenshot({
+    path: "../output/results-deadline-en-mobile.png",
+    fullPage: true,
+  });
+  await page
+    .locator(".followup-question")
+    .screenshot({ path: "../output/deadline-question-en-mobile.png" });
+  await family.screenshot({ path: "../output/family-balance-en-mobile.png" });
 });
 
 test("dates modifiables dans Paramétrer sans modifier le Dashboard ni collecter", async ({
