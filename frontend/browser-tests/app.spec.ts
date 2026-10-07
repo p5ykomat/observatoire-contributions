@@ -653,7 +653,25 @@ test("733 comptes paginés, exclusions réversibles et détails sans défilement
   await expect(
     page.getByLabel("Exclure Compte000", { exact: true }),
   ).toBeChecked();
-  await page.getByLabel("Exclure Compte001", { exact: true }).check();
+  const continueButton = page.getByRole("button", {
+    name: "Vérifier les comptes et continuer",
+    exact: true,
+  });
+  const excludeButton = page.getByRole("button", {
+    name: "Appliquer les exclusions",
+    exact: true,
+  });
+  const tableBox = await page.locator(".cohort-panel").boundingBox();
+  expect((await continueButton.boundingBox())!.y).toBeLessThan(tableBox!.y);
+  expect((await continueButton.boundingBox())!.y).toBeLessThan(600);
+  expect((await excludeButton.boundingBox())!.y).toBeLessThan(tableBox!.y);
+  await page
+    .getByLabel("Comptes à exclure, un par ligne", { exact: true })
+    .fill("Compte001");
+  await excludeButton.click();
+  await expect(
+    page.getByLabel("Exclure Compte001", { exact: true }),
+  ).toBeChecked();
   await expect(
     page.getByText("733 comptes importés : 731 non exclus et 2 exclus.", {
       exact: true,

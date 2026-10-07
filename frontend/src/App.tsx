@@ -582,9 +582,47 @@ export default function App() {
           <>
             <h1>{t("importedParticipants")}</h1>
             <p>{t("qualificationNote")}</p>
-            <button disabled={busy} onClick={() => update({ stage: 0 })}>
-              {t("changeImport")}
-            </button>
+            <div className="actions">
+              <button
+                className="primary"
+                disabled={busy}
+                onClick={() => void perform(qualify)}
+              >
+                {busy ? t("qualifying") : t("qualify")}
+              </button>
+              <button
+                disabled={busy}
+                onClick={() => {
+                  const excluded = new Set(
+                    exclusions.split(/\r?\n/).map(normalize),
+                  );
+                  update({
+                    cohort: s.cohort.map((a) =>
+                      excluded.has(a.username)
+                        ? {
+                            ...a,
+                            included: false,
+                            exclusion_reason: t("excluded"),
+                          }
+                        : a,
+                    ),
+                  });
+                }}
+              >
+                {t("applyExclusions")}
+              </button>
+              <button disabled={busy} onClick={() => update({ stage: 0 })}>
+                {t("changeImport")}
+              </button>
+            </div>
+            {busy && (
+              <p role="status">
+                {t("verificationProgress", {
+                  done: s.cohort.filter((a) => a.qualified).length,
+                  total: s.cohort.length,
+                })}
+              </p>
+            )}
             <div className="form-grid">
               <label>
                 {t("title")}
@@ -594,6 +632,14 @@ export default function App() {
                 />
               </label>
             </div>
+            <label>
+              {t("exclusions")}
+              <textarea
+                rows={3}
+                value={exclusions}
+                onChange={(e) => setExclusions(e.target.value)}
+              />
+            </label>
             {s.diagnostics.length > 0 && (
               <details open>
                 <summary>{t("observed")}</summary>
@@ -617,51 +663,6 @@ export default function App() {
                 })
               }
             />
-            <label>
-              {t("exclusions")}
-              <textarea
-                rows={3}
-                value={exclusions}
-                onChange={(e) => setExclusions(e.target.value)}
-              />
-            </label>
-            <div className="actions">
-              <button
-                onClick={() => {
-                  const excluded = new Set(
-                    exclusions.split(/\r?\n/).map(normalize),
-                  );
-                  update({
-                    cohort: s.cohort.map((a) =>
-                      excluded.has(a.username)
-                        ? {
-                            ...a,
-                            included: false,
-                            exclusion_reason: t("excluded"),
-                          }
-                        : a,
-                    ),
-                  });
-                }}
-              >
-                {t("applyExclusions")}
-              </button>
-              <button
-                className="primary"
-                disabled={busy}
-                onClick={() => void perform(qualify)}
-              >
-                {busy ? t("qualifying") : t("qualify")}
-              </button>
-            </div>
-            {busy && (
-              <p role="status">
-                {t("verificationProgress", {
-                  done: s.cohort.filter((a) => a.qualified).length,
-                  total: s.cohort.length,
-                })}
-              </p>
-            )}
           </>
         )}
         {s.stage === 2 && (

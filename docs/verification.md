@@ -16,6 +16,8 @@ Axe ne signale aucune violation sur les vues testées : import, paramétrage, li
 
 ## Revue d’interface
 
+Actions de l’import : « Vérifier les comptes et continuer », « Appliquer les exclusions » et la modification de la liste sont placées avant le tableau. Vérification de leur position dans le premier écran avec une liste de 733 comptes, exclusions par liste, reprise de vérification et passage au paramétrage. Trois parcours navigateur ciblés réussis ; Axe sans violation sur ordinateur en français et sur mobile en anglais.
+
 Correction du parcours de dates : un seul encart dans Paramétrer regroupe les dates du Dashboard, leur confirmation et les champs modifiables. Il ne modifie pas la source et ne déclenche pas de collecte. Les boutons radio ont une taille cohérente et leur libellé reste aligné. Les préréglages de nouveaux comptes se terminent désormais le jour du début inclus. Une plage personnalisée utilise deux dates de création et reste conservée dans les exports et archives. Les archives précédentes conservent leurs bornes, même lorsqu’elles incluaient le lendemain. Un tableau paginé explique la sélection compte par compte. Les projets sont regroupés par famille avec recherche des langues et sélection globale d’une famille. Tests spécifiques des bornes du 1er juillet, des 60 et 70 jours avant le 26 février, ainsi que de la conservation de la plage personnalisée en JSON. Revue React des composants ajoutés, calculs sans appels réseau et formatage des langues partagé par rendu.
 
 Nouvelle vérification publique de quatre comptes via CentralAuth : Adrien PREVOST est créé le 24 décembre 2025, Tifendyll le 3 avril 2026, Babapirate le 29 mars 2026 et Mathieu Denel WMFr le 23 avril 2014. Pour l’exercice actuel, l’utilisateur choisit le 26 février 2026 comme début et le 1er juillet comme fin ; la fenêtre des nouveaux comptes reste un réglage distinct.
@@ -30,6 +32,6 @@ L’import réel du programme est fonctionnel. Les données publiques peuvent de
 
 ## Publication
 
-Le site conserve son adresse https://retention-wikimedia.vercel.app et son lien anglais https://retention-wikimedia.vercel.app/?lang=en. Toolforge reste une version annoncée à venir. Le dépôt de code cible est https://github.com/p5ykomat/observatoire-contributions. Atlas référence le site et cette adresse.
+Le site conserve son adresse https://retention-wikimedia.vercel.app et son lien anglais https://retention-wikimedia.vercel.app/?lang=en. Le dépôt de code cible est https://github.com/p5ykomat/observatoire-contributions. Atlas référence le site et cette adresse.
 
 Contrôles de cette version depuis le domaine public : import Dashboard réel de Lille (18 comptes), vérification CentralAuth et fenêtre de nouveaux comptes (12 retenus sur 15 non exclus), catalogue, santé et requête XTools courte HTTP 200. Les échéances J+30, J+90, J+120, J+365, Aujourd’hui et la saisie personnalisée recalculent une archive synthétique sans appels API. Aucun échec JavaScript constaté ; Axe sans violation en français desktop et en anglais mobile.
