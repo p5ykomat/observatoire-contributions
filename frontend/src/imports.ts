@@ -133,6 +133,10 @@ const paramsSchema = z
     scope: z.enum(["origin", "custom", "all"]),
     creation_before: z.number().int().min(0).max(36500),
     creation_after: z.number().int().min(0).max(36500),
+    creation_range: z
+      .object({ start: day, end: day })
+      .refine((range) => range.start <= range.end)
+      .optional(),
     creation_restriction: z.boolean(),
     pre_days: z.number().int().min(1).max(36500),
     pre_threshold: z.number().int().min(0),

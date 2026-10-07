@@ -1,3 +1,4 @@
+import { creationWindow } from "./analysis/cohorts";
 import Papa from "papaparse";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -232,11 +233,11 @@ export function makePDF(s: Session, nominative = false) {
   paragraph(
     t("pdfSettings", {
       selection: t("selections." + s.params.selection),
-      before: s.params.creation_before,
-      after: s.params.creation_after,
       automation: t(s.params.exclude_automation ? "yes" : "no"),
     }),
   );
+  if (s.params.selection === "new")
+    paragraph(t("creationDates", creationWindow(s.params)));
   page(t("methodology"));
   for (const text of i18n.t("methodText", { returnObjects: true }) as string[])
     paragraph(text);

@@ -104,6 +104,69 @@ describe("imports et archivage", () => {
   });
 });
 describe("qualification et filtres", () => {
+  it("J-30 autour du 1er juillet inclut juin et le début, sans comptes plus anciens ni lendemain", () => {
+    const s = fixture();
+    s.params.start = "2026-07-01";
+    s.params.creation_before = 30;
+    s.params.creation_after = 0;
+    s.params.selection = "new";
+    for (const date of ["2026-06-01", "2026-06-30", "2026-07-01"]) {
+      expect(
+        segment(
+          { ...s.cohort[0], registration: date + "T23:59:59Z" },
+          [],
+          s.params,
+        ),
+      ).toBe("new");
+    }
+    for (const date of ["2025-02-18", "2026-05-31", "2026-07-02"]) {
+      expect(
+        segment({ ...s.cohort[0], registration: date }, [], s.params),
+      ).not.toBe("new");
+    }
+  });
+  it("la plage personnalisée utilise les deux bornes et survit à l’export JSON", () => {
+    const s = fixture();
+    s.params.creation_range = { start: "2020-12-01", end: "2020-12-28" };
+    const restored = importArchive(JSON.stringify(s));
+    expect(restored.params.creation_range).toEqual(s.params.creation_range);
+    for (const date of ["2020-12-01", "2020-12-28"])
+      expect(
+        segment({ ...s.cohort[0], registration: date }, [], restored.params),
+      ).toBe("new");
+    for (const date of ["2020-11-30", "2020-12-29", "2021-01-01"])
+      expect(
+        segment({ ...s.cohort[0], registration: date }, [], restored.params),
+      ).not.toBe("new");
+    expect(() =>
+      importArchive(
+        JSON.stringify({
+          ...s,
+          params: {
+            ...s.params,
+            creation_range: { start: "2021-01-01", end: "2020-12-01" },
+          },
+        }),
+      ),
+    ).toThrow();
+  });
+  it("60 et 70 jours avant le 26 février expliquent le compte de décembre, sans retenir celui de mars", () => {
+    const s = fixture();
+    s.params.start = "2026-02-26";
+    s.params.creation_after = 0;
+    s.params.creation_before = 60;
+    const account = { ...s.cohort[0], registration: "2025-12-24T13:46:49Z" };
+    expect(segment(account, [], s.params)).not.toBe("new");
+    s.params.creation_before = 70;
+    expect(segment(account, [], s.params)).toBe("new");
+    expect(
+      segment(
+        { ...account, registration: "2026-03-29T15:02:42Z" },
+        [],
+        s.params,
+      ),
+    ).not.toBe("new");
+  });
   it.each([0, 7, 14, 30, 42])(
     "respecte la fenêtre J-%i et sa borne",
     (before) => {

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { Params } from "../types";
-import { dateMs, DAY } from "../analysis/cohorts";
+import { today, type Params } from "../types";
+import { creationWindow } from "../analysis/cohorts";
 
 export function CreationSettings({
   params: p,
@@ -13,16 +13,17 @@ export function CreationSettings({
   const { t } = useTranslation();
   const presets = [
     { before: 0, after: 0 },
-    { before: 7, after: 1 },
-    { before: 14, after: 1 },
-    { before: 30, after: 1 },
+    { before: 7, after: 0 },
+    { before: 14, after: 0 },
+    { before: 30, after: 0 },
   ];
   const initial = presets.findIndex(
     (v) => v.before === p.creation_before && v.after === p.creation_after,
   );
   const [preset, setPreset] = useState(
-    initial < 0 ? "custom" : String(initial),
+    p.creation_range || initial < 0 ? "custom" : String(initial),
   );
+  const window = creationWindow(p);
   return (
     <fieldset className="participant-settings">
       <legend>{t("selection")}</legend>
@@ -62,7 +63,10 @@ export function CreationSettings({
                   change({
                     creation_before: window.before,
                     creation_after: window.after,
+                    creation_range: undefined,
                   });
+                } else {
+                  change({ creation_range: window });
                 }
               }}
             >
@@ -82,48 +86,37 @@ export function CreationSettings({
           {preset === "custom" && (
             <div className="settings-grid">
               <label>
-                {t("before")}
+                {t("creationRangeStart")}
                 <input
-                  type="number"
-                  min="0"
-                  max="36500"
-                  value={p.creation_before}
-                  onChange={(e) =>
-                    change({ creation_before: Number(e.target.value) })
+                  type="date"
+                  max={today()}
+                  value={window.start}
+                  onChange={(event) =>
+                    change({
+                      creation_range: { ...window, start: event.target.value },
+                    })
                   }
                 />
               </label>
               <label>
-                {t("after")}
+                {t("creationRangeEnd")}
                 <input
-                  type="number"
-                  min="0"
-                  max="36500"
-                  value={p.creation_after}
-                  onChange={(e) =>
-                    change({ creation_after: Number(e.target.value) })
+                  type="date"
+                  max={today()}
+                  value={window.end}
+                  onChange={(event) =>
+                    change({
+                      creation_range: { ...window, end: event.target.value },
+                    })
                   }
                 />
               </label>
             </div>
           )}
-          <p className="hint">
-            {t("creationSummary", {
-              before: p.creation_before,
-              after: p.creation_after,
-            })}
-          </p>
-          {p.start && (
-            <p className="notice">
-              {t("creationDates", {
-                start: new Date(dateMs(p.start) - p.creation_before * DAY)
-                  .toISOString()
-                  .slice(0, 10),
-                end: new Date(dateMs(p.start) + p.creation_after * DAY)
-                  .toISOString()
-                  .slice(0, 10),
-              })}
-            </p>
+          {window.start && window.end && window.start <= window.end ? (
+            <p className="notice">{t("creationDates", window)}</p>
+          ) : (
+            <p className="hint">{t("invalidCreationRange")}</p>
           )}
         </div>
       )}

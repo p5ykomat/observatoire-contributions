@@ -67,6 +67,7 @@ export interface Params {
   scope: "origin" | "custom" | "all";
   creation_before: number;
   creation_after: number;
+  creation_range?: { start: string; end: string };
   creation_restriction: boolean;
   pre_days: number;
   pre_threshold: number;
@@ -141,7 +142,7 @@ export function emptySession(): Session {
       projects: ["frwiki", "wikidatawiki", "commonswiki"],
       scope: "all",
       creation_before: 14,
-      creation_after: 1,
+      creation_after: 0,
       creation_restriction: false,
       pre_days: 180,
       pre_threshold: 2,

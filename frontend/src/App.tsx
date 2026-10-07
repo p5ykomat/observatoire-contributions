@@ -23,9 +23,11 @@ const Results = lazy(() =>
 );
 import { FileInput } from "./components/FileInput";
 import { aggregate } from "./analysis/aggregation";
-import { signature } from "./analysis/cohorts";
+import { creationWindow, dateMs, signature } from "./analysis/cohorts";
 import { CreationSettings } from "./components/CreationSettings";
 import { QualificationTable } from "./components/QualificationTable";
+import { ProjectPicker } from "./components/ProjectPicker";
+import { SelectionReview } from "./components/SelectionReview";
 interface Dashboard {
   title: string;
   start: string | null;
@@ -44,7 +46,6 @@ export default function App() {
     [csv, setCSV] = useState<string[][]>([]),
     [column, setColumn] = useState(0),
     [exclusions, setExclusions] = useState(""),
-    [projectSearch, setProjectSearch] = useState(""),
     [dashboardDates, setDashboardDates] = useState<{
       start: string;
       end: string;
@@ -100,6 +101,7 @@ export default function App() {
   }
   function validateDates() {
     const p = s.params;
+    const window = creationWindow(p);
     if (
       !p.start ||
       !p.end ||
@@ -113,6 +115,14 @@ export default function App() {
       (p.scope === "custom" && !p.projects.length)
     )
       throw new Error(t("errors.dates"));
+    if (
+      p.selection === "new" &&
+      (!Number.isFinite(dateMs(window.start)) ||
+        !Number.isFinite(dateMs(window.end)) ||
+        window.start > window.end ||
+        window.end > today())
+    )
+      throw new Error(t("invalidCreationRange"));
   }
   async function qualify() {
     const current = generation.current;
@@ -206,8 +216,7 @@ export default function App() {
       start: data.start?.slice(0, 10) ?? "",
       end: data.end?.slice(0, 10) ?? "",
     });
-    if (data.end && data.end.slice(0, 10) > today())
-      setNotice(t("dashboardFutureEnd"));
+    setNotice("");
     setDateChoice("");
     const origin = home
       ? home.project === "wikidata"
@@ -253,7 +262,6 @@ export default function App() {
     setColumn(0);
     setCsvHeader(true);
     setExclusions("");
-    setProjectSearch("");
     setDashboardDates(null);
     setDateChoice("");
     setNotice("");
@@ -267,65 +275,18 @@ export default function App() {
     else resetAnalysis();
   }
   function projectPicker(key: "origins" | "projects") {
-    const options = s.catalog.filter(
-      (p) =>
-        p.domain.includes(projectSearch.toLowerCase()) ||
-        p.id.includes(projectSearch.toLowerCase()),
-    );
     return (
-      <fieldset>
-        <legend>{t(key)}</legend>
-        <label>
-          {t("projectSearch")}
-          <input
-            value={projectSearch}
-            onChange={(e) => setProjectSearch(e.target.value)}
-          />
-        </label>
-        <div className="project-list">
-          {options.map((p) => (
-            <label key={p.id}>
-              <input
-                type="checkbox"
-                checked={s.params[key].includes(p.id)}
-                onChange={() =>
-                  params({
-                    [key]: s.params[key].includes(p.id)
-                      ? s.params[key].filter((x) => x !== p.id)
-                      : [...s.params[key], p.id],
-                  })
-                }
-              />
-              {p.domain}
-            </label>
-          ))}
-        </div>
-        {!s.catalog.length && (
-          <>
-            <input
-              aria-label={t(key)}
-              value={s.params[key].join(", ")}
-              onChange={(e) =>
-                params({
-                  [key]: e.target.value
-                    .split(",")
-                    .map((v) => v.trim())
-                    .filter(Boolean),
-                })
-              }
-            />
-            <button
-              onClick={() =>
-                void perform(async () =>
-                  update({ catalog: await api<Project[]>("projects") }),
-                )
-              }
-            >
-              {t("retry")}
-            </button>
-          </>
-        )}
-      </fieldset>
+      <ProjectPicker
+        title={key}
+        catalog={s.catalog}
+        selected={s.params[key]}
+        change={(ids) => params({ [key]: ids })}
+        retry={() =>
+          void perform(async () =>
+            update({ catalog: await api<Project[]>("projects") }),
+          )
+        }
+      />
     );
   }
   const result = useMemo(() => aggregate(s), [s]),
@@ -344,6 +305,74 @@ export default function App() {
       void perform(qualify);
     else update({ stage });
   }
+  const eventDates = (
+    <fieldset>
+      <legend>{t("eventDatesTitle")}</legend>
+      {dashboardDates && <p>{t("dashboardDateCheck", dashboardDates)}</p>}
+      <p className="hint">{t("eventDatesHelp")}</p>
+      {dashboardDates && (
+        <div>
+          <p>{t("dashboardDatesQuestion")}</p>
+          <label className="check">
+            <input
+              type="radio"
+              name="event-date-source"
+              checked={dateChoice === "provided"}
+              disabled={
+                !dashboardDates.start ||
+                !dashboardDates.end ||
+                dashboardDates.end > today() ||
+                dashboardDates.start > dashboardDates.end
+              }
+              onChange={() => {
+                setDateChoice("provided");
+                params(dashboardDates);
+              }}
+            />
+            {t("useDashboardDates")}
+          </label>
+          <label className="check">
+            <input
+              type="radio"
+              name="event-date-source"
+              checked={dateChoice === "custom"}
+              onChange={() => setDateChoice("custom")}
+            />
+            {t("customEventDates")}
+          </label>
+          {dashboardDates.end > today() && (
+            <p className="hint">{t("futureDashboardDates")}</p>
+          )}
+        </div>
+      )}
+      <div className="form-grid">
+        <label>
+          {t("start")}
+          <input
+            type="date"
+            value={s.params.start}
+            max={today()}
+            onChange={(e) => {
+              params({ start: e.target.value });
+              if (dashboardDates) setDateChoice("custom");
+            }}
+          />
+        </label>
+        <label>
+          {t("end")}
+          <input
+            type="date"
+            value={s.params.end}
+            max={today()}
+            onChange={(e) => {
+              params({ end: e.target.value });
+              if (dashboardDates) setDateChoice("custom");
+            }}
+          />
+        </label>
+      </div>
+    </fieldset>
+  );
   return (
     <div className="app theme-2">
       <a className="skip" href="#main">
@@ -416,9 +445,6 @@ export default function App() {
           <p role="alert" className="error">
             {translateMessage(error)}
           </p>
-        )}
-        {dashboardDates && (s.stage === 1 || s.stage === 2) && (
-          <p className="notice">{t("dashboardDateCheck", dashboardDates)}</p>
         )}
         {s.stage === 0 && (
           <>
@@ -642,43 +668,7 @@ export default function App() {
           <>
             <h1>{t("steps.1")}</h1>
             <p>{t("collectionNotice")}</p>
-            <p className="hint">{t("eventDatesHelp")}</p>
-            {dashboardDates && (
-              <fieldset>
-                <legend>{t("dashboardDatesQuestion")}</legend>
-                <p>{t("dashboardDateCheck", dashboardDates)}</p>
-                <label className="check">
-                  <input
-                    type="radio"
-                    name="event-date-source"
-                    checked={dateChoice === "provided"}
-                    disabled={
-                      !dashboardDates.start ||
-                      !dashboardDates.end ||
-                      dashboardDates.end > today() ||
-                      dashboardDates.start > dashboardDates.end
-                    }
-                    onChange={() => {
-                      setDateChoice("provided");
-                      params(dashboardDates);
-                    }}
-                  />
-                  {t("useDashboardDates")}
-                </label>
-                <label className="check">
-                  <input
-                    type="radio"
-                    name="event-date-source"
-                    checked={dateChoice === "custom"}
-                    onChange={() => setDateChoice("custom")}
-                  />
-                  {t("customEventDates")}
-                </label>
-                {dashboardDates.end > today() && (
-                  <p className="hint">{t("futureDashboardDates")}</p>
-                )}
-              </fieldset>
-            )}
+            {eventDates}
             {changed && <p className="notice">{t("errors.changed")}</p>}
             <div className="form-grid">
               <label>
@@ -686,30 +676,6 @@ export default function App() {
                 <input
                   value={s.params.title}
                   onChange={(e) => params({ title: e.target.value })}
-                />
-              </label>
-              <label>
-                {t("start")}
-                <input
-                  type="date"
-                  value={s.params.start}
-                  max={today()}
-                  onChange={(e) => {
-                    params({ start: e.target.value });
-                    if (dashboardDates) setDateChoice("custom");
-                  }}
-                />
-              </label>
-              <label>
-                {t("end")}
-                <input
-                  type="date"
-                  value={s.params.end}
-                  max={today()}
-                  onChange={(e) => {
-                    params({ end: e.target.value });
-                    if (dashboardDates) setDateChoice("custom");
-                  }}
                 />
               </label>
             </div>
@@ -723,6 +689,7 @@ export default function App() {
               })}
             </p>
             {result.n === 0 && <p className="notice">{t("zeroSelection")}</p>}
+            <SelectionReview rows={result.rows} params={s.params} />
             <label>
               {t("scope")}
               <select

@@ -2,13 +2,24 @@ import type { Account, Edit, Params, Segment } from "../types";
 export const DAY = 86400000;
 export const dateMs = (date: string) =>
   Date.parse(date.slice(0, 10) + "T00:00:00Z");
+export function creationWindow(p: Params): { start: string; end: string } {
+  if (p.creation_range) return p.creation_range;
+  const start = dateMs(p.start);
+  if (!Number.isFinite(start)) return { start: "", end: "" };
+  return {
+    start: new Date(start - p.creation_before * DAY).toISOString().slice(0, 10),
+    end: new Date(start + p.creation_after * DAY).toISOString().slice(0, 10),
+  };
+}
 export function segment(account: Account, edits: Edit[], p: Params): Segment {
   if (!account.registration || account.exists !== true) return "unknown";
   const created = dateMs(account.registration),
-    start = dateMs(p.start);
+    start = dateMs(p.start),
+    window = creationWindow(p);
   if (
-    created >= start - p.creation_before * DAY &&
-    created <= start + p.creation_after * DAY
+    window.start <= window.end &&
+    created >= dateMs(window.start) &&
+    created <= dateMs(window.end)
   )
     return "new";
   if (created >= start || !account.pre_complete) return "unknown";

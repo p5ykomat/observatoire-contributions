@@ -476,19 +476,29 @@ test("paramétrage simplifié, fenêtre conditionnelle et catégories expliquée
     .getByLabel("Préréglage de création", { exact: true })
     .selectOption("1");
   await expect(
-    page.getByText("Les comptes créés entre 7 jours avant et 1 jours après", {
-      exact: false,
-    }),
+    page.getByText(
+      "Comptes considérés comme nouveaux : créés du 2020-12-25 au 2021-01-01 inclus",
+      {
+        exact: false,
+      },
+    ),
   ).toBeVisible();
   await page
     .getByLabel("Préréglage de création", { exact: true })
     .selectOption("custom");
-  await page.getByLabel("Jours avant", { exact: true }).fill("3");
-  await page.getByLabel("Jours après", { exact: true }).fill("2");
+  await page
+    .getByLabel("Compte créé à partir du", { exact: true })
+    .fill("2020-12-29");
+  await page
+    .getByLabel("Compte créé jusqu’au (inclus)", { exact: true })
+    .fill("2021-01-03");
   await expect(
-    page.getByText("Les comptes créés entre 3 jours avant et 2 jours après", {
-      exact: false,
-    }),
+    page.getByText(
+      "Comptes considérés comme nouveaux : créés du 2020-12-29 au 2021-01-03 inclus",
+      {
+        exact: false,
+      },
+    ),
   ).toBeVisible();
   await page
     .getByLabel("Participants retenus", { exact: true })
@@ -526,6 +536,90 @@ test("paramétrage simplifié, fenêtre conditionnelle et catégories expliquée
     path: "../output/settings-mobile.png",
     fullPage: true,
   });
+});
+
+test("projets regroupés par famille, langues recherchables et sélection complète", async ({
+  page,
+}) => {
+  await mocks(page);
+  await page.route("**/api/projects", (route) =>
+    route.fulfill({
+      json: [
+        ...projects,
+        {
+          id: "enwiki",
+          domain: "en.wikipedia.org",
+          label: "en.wikipedia.org",
+          family: "wikipedia",
+        },
+        {
+          id: "frwiktionary",
+          domain: "fr.wiktionary.org",
+          label: "fr.wiktionary.org",
+          family: "wiktionary",
+        },
+        {
+          id: "enwiktionary",
+          domain: "en.wiktionary.org",
+          label: "en.wiktionary.org",
+          family: "wiktionary",
+        },
+      ],
+    }),
+  );
+  await imported(page);
+  await page
+    .getByRole("combobox", { name: "Périmètre de collecte", exact: true })
+    .selectOption("custom");
+  const picker = page.getByRole("group", {
+    name: "Projets à analyser",
+    exact: true,
+  });
+  await picker.locator("summary").filter({ hasText: "Wikipédia" }).click();
+  await expect(
+    picker.getByRole("checkbox", { name: /Français \(fr\)/i }),
+  ).toBeChecked();
+  await picker.getByRole("checkbox", { name: /Anglais \(en\)/i }).check();
+  await picker
+    .getByRole("button", {
+      name: "Effacer la sélection de Wikipédia",
+      exact: true,
+    })
+    .click();
+  await expect(
+    picker.getByRole("checkbox", { name: /Français \(fr\)/i }),
+  ).not.toBeChecked();
+  await picker
+    .getByRole("button", {
+      name: "Sélectionner toutes les éditions de Wikipédia",
+      exact: true,
+    })
+    .click();
+  await expect(
+    picker.getByRole("checkbox", { name: /Anglais \(en\)/i }),
+  ).toBeChecked();
+  await picker
+    .getByLabel("Rechercher un projet", { exact: true })
+    .fill("anglais");
+  await expect(
+    picker.getByRole("checkbox", { name: /Anglais \(en\)/i }),
+  ).toHaveCount(2);
+  await expect(
+    picker.getByRole("checkbox", { name: /Français \(fr\)/i }),
+  ).toHaveCount(0);
+  await picker
+    .locator("details")
+    .filter({ hasText: "Wiktionnaire" })
+    .getByRole("checkbox")
+    .check();
+  await expect(picker.getByRole("status")).toContainText("5");
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth > innerWidth,
+    ),
+  ).toBe(false);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 
 test("733 comptes paginés, exclusions réversibles et détails sans défilement horizontal", async ({
@@ -722,11 +816,9 @@ test("graphiques expliqués, pourcentages avec dénominateurs et groupes retiré
   ).toHaveCount(0);
   await page.getByRole("button", { name: "J+30", exact: true }).click();
   await expect(
-    page
-      .getByRole("status")
-      .filter({
-        hasText: "Période analysée : du 2021-01-03 au 2021-02-01 inclus",
-      }),
+    page.getByRole("status").filter({
+      hasText: "Période analysée : du 2021-01-03 au 2021-02-01 inclus",
+    }),
   ).toBeVisible();
   await expect(
     page
@@ -734,14 +826,12 @@ test("graphiques expliqués, pourcentages avec dénominateurs et groupes retiré
       .filter({ hasText: "Contributions éligibles observées" })
       .getByText("2", { exact: true }),
   ).toBeVisible();
-  const project = page
-    .locator(".chart")
-    .filter({
-      has: page.getByRole("heading", {
-        name: "Combien de personnes contribuent sur chaque projet ?",
-        exact: true,
-      }),
-    });
+  const project = page.locator(".chart").filter({
+    has: page.getByRole("heading", {
+      name: "Combien de personnes contribuent sur chaque projet ?",
+      exact: true,
+    }),
+  });
   await project
     .getByText("Afficher les valeurs du graphique", { exact: true })
     .click();
@@ -784,6 +874,69 @@ test("graphiques expliqués, pourcentages avec dénominateurs et groupes retiré
       { exact: false },
     ),
   ).toBeVisible();
+});
+
+test("dates modifiables dans Paramétrer sans modifier le Dashboard ni collecter", async ({
+  page,
+}) => {
+  await mocks(page);
+  const calls: string[] = [];
+  page.on("request", (request) => {
+    if (request.url().includes("/api/"))
+      calls.push(new URL(request.url()).pathname);
+  });
+  await page.goto("/");
+  await page
+    .getByLabel("URL du programme Dashboard")
+    .fill("https://outreachdashboard.wmflabs.org/courses/Org/Lille");
+  await page
+    .getByRole("button", { name: "Importer le programme", exact: true })
+    .click();
+  await expect(
+    page.getByText("Dates fournies par le Dashboard", { exact: false }),
+  ).toHaveCount(0);
+  await page
+    .getByRole("button", {
+      name: "Vérifier les comptes et continuer",
+      exact: true,
+    })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Paramétrer", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Dates fournies par le Dashboard", { exact: false }),
+  ).toHaveCount(1);
+  await page
+    .getByLabel("Début de l’action", { exact: true })
+    .fill("2026-02-26");
+  await page.getByLabel("Fin de l’action", { exact: true }).fill("2026-07-01");
+  await expect(
+    page.getByLabel("Non, saisir les dates réelles ci-dessous", {
+      exact: true,
+    }),
+  ).toBeChecked();
+  await expect(
+    page.getByText("aucun droit d’administration n’est nécessaire", {
+      exact: false,
+    }),
+  ).toBeVisible();
+  const radio = page.getByLabel("Non, saisir les dates réelles ci-dessous", {
+    exact: true,
+  });
+  const box = await radio.boundingBox();
+  expect(box!.width).toBeLessThan(25);
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth > innerWidth,
+    ),
+  ).toBe(false);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  expect(calls.filter((path) => path === "/api/dashboard")).toHaveLength(1);
+  expect(calls.filter((path) => path.includes("contributions"))).toHaveLength(
+    0,
+  );
 });
 
 test("dates Dashboard futures à remplacer et nouveaux comptes retenus avec la bonne action", async ({
@@ -848,6 +1001,14 @@ test("dates Dashboard futures à remplacer et nouveaux comptes retenus avec la b
   await page
     .getByRole("button", { name: "Importer le programme", exact: true })
     .click();
+  await expect(
+    page.getByText("Dates fournies par le Dashboard", { exact: false }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByText("Le programme Dashboard indique une date de fin future", {
+      exact: false,
+    }),
+  ).toHaveCount(0);
   await page
     .getByRole("button", {
       name: "Vérifier les comptes et continuer",
@@ -879,11 +1040,15 @@ test("dates Dashboard futures à remplacer et nouveaux comptes retenus avec la b
   await page
     .getByLabel("Préréglage de création", { exact: true })
     .selectOption("custom");
-  await page.getByLabel("Jours avant", { exact: true }).fill("14");
-  await page.getByLabel("Jours après", { exact: true }).fill("10");
+  await page
+    .getByLabel("Compte créé à partir du", { exact: true })
+    .fill("2026-03-20");
+  await page
+    .getByLabel("Compte créé jusqu’au (inclus)", { exact: true })
+    .fill("2026-04-13");
   await expect(
     page.getByText(
-      "Fenêtre exacte de création : du 2026-03-20 au 2026-04-13 inclus",
+      "Comptes considérés comme nouveaux : créés du 2026-03-20 au 2026-04-13 inclus",
       { exact: false },
     ),
   ).toBeVisible();
@@ -893,6 +1058,9 @@ test("dates Dashboard futures à remplacer et nouveaux comptes retenus avec la b
     }),
   ).toBeVisible();
   await page
+    .getByLabel("Préréglage de création", { exact: true })
+    .selectOption("2");
+  await page
     .getByLabel("Début de l’action", { exact: true })
     .fill("2026-02-26");
   await expect(
@@ -900,6 +1068,16 @@ test("dates Dashboard futures à remplacer et nouveaux comptes retenus avec la b
       .getByRole("status")
       .filter({ hasText: "Sélection avant collecte : 0 comptes retenus" }),
   ).toBeVisible();
+  await page
+    .getByText("Voir les comptes retenus et les motifs de non-sélection", {
+      exact: true,
+    })
+    .first()
+    .click();
+  const selection = page.locator(".selection-review");
+  await expect(
+    selection.getByRole("row").filter({ hasText: "Compte1" }).first(),
+  ).toContainText("après la fenêtre");
   const contributions: string[] = [];
   page.on("request", (request) => {
     if (request.url().includes("contributions"))

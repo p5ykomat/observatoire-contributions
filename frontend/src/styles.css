@@ -315,7 +315,7 @@ label {
   margin-bottom: 18px;
   line-height: 1.5;
 }
-input:not([type="checkbox"]),
+input:not([type="checkbox"]):not([type="radio"]),
 select,
 textarea {
   width: 100%;
@@ -331,7 +331,8 @@ textarea {
   resize: vertical;
   line-height: 1.6;
 }
-input[type="checkbox"] {
+input[type="checkbox"],
+input[type="radio"] {
   accent-color: var(--accent);
   width: 18px;
   height: 18px;
@@ -394,6 +395,23 @@ input[type="file"] {
   margin: 0;
   min-height: 38px;
   font-size: 13px;
+}
+.project-family {
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+.project-family .actions {
+  margin-top: 12px;
+}
+.project-domain {
+  display: block;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.selection-review {
+  margin: 20px 0;
 }
 fieldset {
   border: 1px solid var(--line);
