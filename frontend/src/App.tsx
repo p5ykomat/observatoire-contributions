@@ -54,6 +54,7 @@ export default function App() {
     [paused, setPaused] = useState(false);
   const collector = useRef<Collector | null>(null);
   const generation = useRef(0);
+  const customScopeInitialized = useRef(false);
   const importRequest = useRef<AbortController | null>(null);
   const resetDialog = useRef<HTMLDialogElement>(null);
   const [csvHeader, setCsvHeader] = useState(true);
@@ -200,6 +201,7 @@ export default function App() {
       controller.signal,
     );
     if (current !== generation.current) return;
+    customScopeInitialized.current = false;
     const imported = importNames(
       data.participants.map((a) => a.username).join("\n"),
     );
@@ -234,6 +236,7 @@ export default function App() {
         start: "",
         end: "",
         origins: [origin],
+        projects: [],
       },
       cohort: accounts,
       diagnostics: imported.diagnostics,
@@ -262,6 +265,7 @@ export default function App() {
     setColumn(0);
     setCsvHeader(true);
     setExclusions("");
+    customScopeInitialized.current = false;
     setDashboardDates(null);
     setDateChoice("");
     setNotice("");
@@ -275,12 +279,24 @@ export default function App() {
     else resetAnalysis();
   }
   function projectPicker(key: "origins" | "projects") {
+    const fixed = key === "origins" && dashboardDates !== null;
     return (
       <ProjectPicker
         title={key}
-        catalog={s.catalog}
+        catalog={
+          fixed
+            ? s.catalog.filter((project) =>
+                s.params.origins.includes(project.id),
+              )
+            : s.catalog
+        }
         selected={s.params[key]}
-        change={(ids) => params({ [key]: ids })}
+        readOnly={fixed}
+        help={fixed ? "dashboardOriginProjectsHelp" : undefined}
+        change={(ids) => {
+          if (key === "projects") customScopeInitialized.current = true;
+          params({ [key]: ids });
+        }}
         retry={() =>
           void perform(async () =>
             update({ catalog: await api<Project[]>("projects") }),
@@ -508,6 +524,8 @@ export default function App() {
                       imported.params.creation_restriction = false;
                       collector.current?.stop();
                       setDashboardDates(null);
+                      customScopeInitialized.current =
+                        imported.params.scope === "custom";
                       setDateChoice("");
                       setS(imported);
                       setNotice(t("saved"));
@@ -695,9 +713,16 @@ export default function App() {
               {t("scope")}
               <select
                 value={s.params.scope}
-                onChange={(e) =>
-                  params({ scope: e.target.value as Params["scope"] })
-                }
+                onChange={(e) => {
+                  const scope = e.target.value as Params["scope"];
+                  params({
+                    scope,
+                    ...(scope === "custom" && !customScopeInitialized.current
+                      ? { projects: [] }
+                      : {}),
+                  });
+                  if (scope === "custom") customScopeInitialized.current = true;
+                }}
               >
                 {["origin", "custom", "all"].map((k) => (
                   <option key={k} value={k}>
@@ -706,10 +731,30 @@ export default function App() {
                 ))}
               </select>
             </label>
-            <div className="settings-grid">
-              {projectPicker("origins")}
-              {s.params.scope === "custom" && projectPicker("projects")}
-            </div>
+            {s.params.scope === "origin" && projectPicker("origins")}
+            {s.params.scope === "custom" && (
+              <>
+                {!s.params.projects.length && (
+                  <p className="notice">{t("customScopeEmpty")}</p>
+                )}
+                {projectPicker("projects")}
+              </>
+            )}
+            {s.params.scope === "all" && (
+              <ProjectPicker
+                title="allCollectionProjects"
+                catalog={s.catalog}
+                selected={[...new Set(s.catalog.map((project) => project.id))]}
+                readOnly
+                help="allCollectionProjectsHelp"
+                change={() => {}}
+                retry={() =>
+                  void perform(async () =>
+                    update({ catalog: await api<Project[]>("projects") }),
+                  )
+                }
+              />
+            )}
             <fieldset>
               <legend>{t("automation")}</legend>
               <p className="hint">{t("resultsFiltersHelp")}</p>
@@ -728,7 +773,10 @@ export default function App() {
             <div className="actions">
               <button
                 className="primary"
-                disabled={busy}
+                disabled={
+                  busy ||
+                  (s.params.scope === "custom" && !s.params.projects.length)
+                }
                 onClick={() => void perform(() => launch(changed))}
               >
                 {t(changed ? "restart" : "launch")}

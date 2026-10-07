@@ -19,12 +19,16 @@ export function ProjectPicker({
   selected,
   change,
   retry,
+  readOnly = false,
+  help,
 }: {
-  title: "origins" | "projects";
+  title: "origins" | "projects" | "allCollectionProjects";
   catalog: Project[];
   selected: string[];
   change: (ids: string[]) => void;
   retry: () => void;
+  readOnly?: boolean;
+  help?: string;
 }) {
   const { t, i18n } = useTranslation();
   const [search, setSearch] = useState("");
@@ -59,7 +63,7 @@ export function ProjectPicker({
   return (
     <fieldset className="project-picker">
       <legend>{t(title)}</legend>
-      <p className="hint">{t("projectPickerHelp")}</p>
+      <p className="hint">{t(help ?? "projectPickerHelp")}</p>
       <p role="status">
         {t("projectSelectionCount", { count: selected.length })}
       </p>
@@ -84,10 +88,22 @@ export function ProjectPicker({
         return (
           <details
             key={family}
-            open={query ? true : undefined}
+            open={query || (readOnly && catalog.length < 3) ? true : undefined}
             className="project-family"
           >
             <summary>
+              {readOnly && (
+                <input
+                  type="checkbox"
+                  disabled
+                  checked={all.every((project) =>
+                    selected.includes(project.id),
+                  )}
+                  aria-label={t("includedProjectFamily", {
+                    family: familyName(family),
+                  })}
+                />
+              )}
               {familyName(family)}{" "}
               <span className="hint">
                 (
@@ -100,7 +116,7 @@ export function ProjectPicker({
                 )
               </span>
             </summary>
-            {all.length > 1 && (
+            {all.length > 1 && !readOnly && (
               <div className="actions">
                 <button
                   type="button"
@@ -134,6 +150,7 @@ export function ProjectPicker({
                 <label key={project.id}>
                   <input
                     type="checkbox"
+                    disabled={readOnly}
                     checked={selected.includes(project.id)}
                     onChange={() =>
                       change(
@@ -166,19 +183,21 @@ export function ProjectPicker({
         ) && <p>{t("noProjectsFound")}</p>}
       {!catalog.length && (
         <>
-          <input
-            aria-label={t(title)}
-            value={selected.join(", ")}
-            onChange={(event) =>
-              change(
-                event.target.value
-                  .split(",")
-                  .map((value) => value.trim())
-                  .filter(Boolean),
-              )
-            }
-          />
-          <button onClick={retry}>{t("retry")}</button>
+          {!readOnly && (
+            <input
+              aria-label={t(title)}
+              value={selected.join(", ")}
+              onChange={(event) =>
+                change(
+                  event.target.value
+                    .split(",")
+                    .map((value) => value.trim())
+                    .filter(Boolean),
+                )
+              }
+            />
+          )}
+          <button onClick={retry}>{t("reloadProjectCatalog")}</button>
         </>
       )}
     </fieldset>

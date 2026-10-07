@@ -136,6 +136,67 @@ it("les comptes MediaWiki sont regroupés par projet", async () => {
   expect(s.queue).toHaveLength(1);
   expect(s.queue[0].usernames).toEqual(["Alice", "Bob"]);
 });
+it("tous les projets collecte aussi des éditions anglaises et Commons avec une sélection personnalisée vide", async () => {
+  const s = session();
+  s.cohort = s.cohort.slice(0, 1);
+  s.params.scope = "all";
+  s.params.projects = [];
+  s.catalog.push(
+    {
+      id: "enwiki",
+      domain: "en.wikipedia.org",
+      label: "English",
+      family: "wikipedia",
+    },
+    {
+      id: "commonswiki",
+      domain: "commons.wikimedia.org",
+      label: "Commons",
+      family: "commons",
+    },
+  );
+  s.namespaces.enwiki = { "0": { id: 0, canonical: "" } };
+  s.namespaces.commonswiki = { "6": { id: 6, canonical: "File" } };
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string) => {
+      if (!url.includes("global-contributions"))
+        throw new Error(
+          "La collecte globale ne doit pas être limitée au projet d’origine",
+        );
+      return Response.json({
+        rows: [
+          {
+            username: "Alice",
+            project: "en.wikipedia.org",
+            rev_id: 1,
+            timestamp: "2021-01-03T00:00:00Z",
+            namespace: 0,
+            page_title: "Article",
+          },
+          {
+            username: "Alice",
+            project: "commons.wikimedia.org",
+            rev_id: 1,
+            timestamp: "2021-01-04T00:00:00Z",
+            namespace: 6,
+            page_title: "File:Image",
+          },
+        ],
+        cursor: null,
+      });
+    }),
+  );
+  const collector = new Collector(s, () => {});
+  await collector.prepare(true);
+  await collector.run();
+  expect(s.edits.map((edit) => edit.project)).toEqual([
+    "enwiki",
+    "commonswiki",
+  ]);
+  expect(s.cohort[0].post_complete).toBe(true);
+});
+
 it("annuler conserve la file et les comptes déjà analysés", async () => {
   const s = session();
   s.queue = [{ provider: "xtools", usernames: ["Alice"], attempts: 0 }];

@@ -2,6 +2,8 @@
 
 ## Contrôles locaux
 
+Clarification des périmètres : 60 tests Vitest réussis, dont une collecte globale de contributions anglaises et Commons avec un projet d’origine français et une sélection personnalisée vide. Quatre parcours navigateur ciblés réussis : mode global entièrement coché, mode personnalisé sans présélection, choix conservés lors des changements de mode, projet du Dashboard fixé et sans seconde liste. TypeScript strict, ESLint et build validés.
+
 Mise à jour du paramétrage : 59 tests Vitest réussis et 17 parcours navigateur validés. TypeScript strict, ESLint et build validés. Revue avec le catalogue public de 1 070 projets, recherche des éditions anglaises par famille et Axe sans violation en français desktop et en anglais mobile. Une plage personnalisée du 26 février au 1er juillet retient 13 des 15 comptes non exclus du programme de Lille, d’après les dates publiques déjà vérifiées. Cette vérification ne collecte pas leurs contributions.
 
 42 tests pytest réussis (2 tests d’intégration exclus), Ruff et son formatage validés. 56 tests Vitest réussis et 15 parcours Playwright réussis. TypeScript strict, ESLint et build Vite réussis. Le build charge les résultats et les exports séparément ; un avertissement de taille concerne le module de graphiques.
@@ -20,11 +22,13 @@ Actions de l’import : « Vérifier les comptes et continuer », « Appliquer l
 
 Correction du parcours de dates : un seul encart dans Paramétrer regroupe les dates du Dashboard, leur confirmation et les champs modifiables. Il ne modifie pas la source et ne déclenche pas de collecte. Les boutons radio ont une taille cohérente et leur libellé reste aligné. Les préréglages de nouveaux comptes se terminent désormais le jour du début inclus. Une plage personnalisée utilise deux dates de création et reste conservée dans les exports et archives. Les archives précédentes conservent leurs bornes, même lorsqu’elles incluaient le lendemain. Un tableau paginé explique la sélection compte par compte. Les projets sont regroupés par famille avec recherche des langues et sélection globale d’une famille. Tests spécifiques des bornes du 1er juillet, des 60 et 70 jours avant le 26 février, ainsi que de la conservation de la plage personnalisée en JSON. Revue React des composants ajoutés, calculs sans appels réseau et formatage des langues partagé par rendu.
 
-Nouvelle vérification publique de quatre comptes via CentralAuth : Adrien PREVOST est créé le 24 décembre 2025, Tifendyll le 3 avril 2026, Babapirate le 29 mars 2026 et Mathieu Denel WMFr le 23 avril 2014. Pour l’exercice actuel, l’utilisateur choisit le 26 février 2026 comme début et le 1er juillet comme fin ; la fenêtre des nouveaux comptes reste un réglage distinct.
+Nouvelle vérification publique de quatre comptes via CentralAuth : Adrien PREVOST est créé le 24 décembre 2025, Tifendyll le 3 avril 2026, Babapirate le 29 mars 2026 et Mathieu Denel WMFr le 23 avril 2014. Les dates réelles saisies dans l’analyse restent distinctes des dates de création des comptes et de celles du programme Dashboard.
 
 Direction Observatoire conservée. Revue locale avec better-ui, better-typography, better-colors, better-layout, better-accessibility, better-writing et react-best-practices. La skill better-interface étant absente, une revue équivalente quick vérifie hiérarchie, états partiels, interactions, focus, contraste, tableaux et responsive. Aucun asset externe nouveau ni aucune comparaison de directions n’est nécessaire pour cette direction déjà choisie.
 
 ## Sources publiques
+
+Nouvelle requête publique du Dashboard et de CentralAuth sur les 15 comptes non exclus : aucun compte créé du 1er janvier au 26 février 2026 inclus. Deux comptes sont plus anciens (28 juillet 2024 et 24 décembre 2025) ; les treize autres vont du 26 mars au 17 avril 2026. Le zéro sur cette plage est conforme aux données publiques. Ces dates ne prouvent pas à elles seules les dates de l’événement.
 
 Le programme Formation ED Lille avril 2026 expose un début au 26 février 2026 en UTC et une fin en 2052. L’événement réel confirmé par l’utilisateur est le 3 avril 2026. Les dates publiques de création des 18 comptes ont été vérifiées. Avec trois comptes d’organisation exclus et une fenêtre du 20 mars au 13 avril inclus, 12 comptes correspondent à la sélection de nouveaux comptes. Une fin future du Dashboard ne peut être utilisée comme fin de cet événement.
 

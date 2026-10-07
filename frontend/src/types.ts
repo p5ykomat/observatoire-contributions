@@ -139,7 +139,7 @@ export function emptySession(): Session {
       end: "",
       reference: today(),
       origins: ["frwiki"],
-      projects: ["frwiki", "wikidatawiki", "commonswiki"],
+      projects: [],
       scope: "all",
       creation_before: 14,
       creation_after: 0,

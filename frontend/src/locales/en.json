@@ -64,6 +64,12 @@
     "unknown": "Unknown"
   },
   "scope": "Collection scope",
+  "allCollectionProjects": "Projects included in collection",
+  "allCollectionProjectsHelp": "All projects in the Wikimedia catalog are included, in every language. The boxes are checked automatically. To choose only certain sites, use “Custom selection”.",
+  "dashboardOriginProjectsHelp": "Collection is limited to the project supplied by the Dashboard. To follow other projects or languages, choose “Custom selection” or “All Wikimedia projects”.",
+  "includedProjectFamily": "{{family}} projects included",
+  "customScopeEmpty": "No project is selected by default. Select the sites or languages to collect before starting collection.",
+  "reloadProjectCatalog": "Reload the project list",
   "scopes": {
     "origin": "Event project(s)",
     "custom": "Custom selection",
@@ -356,7 +362,8 @@
       "wikinews": "Wikinews",
       "wikiversity": "Wikiversity",
       "wikivoyage": "Wikivoyage",
-      "special": "Other Wikimedia sites"
+      "special": "Other Wikimedia sites",
+      "wikimedia": "Other Wikimedia sites"
     },
     "projectTable": "Results by project family"
   },

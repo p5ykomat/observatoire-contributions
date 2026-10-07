@@ -64,6 +64,12 @@
     "unknown": "Inconnus"
   },
   "scope": "Périmètre de collecte",
+  "allCollectionProjects": "Projets inclus dans la collecte",
+  "allCollectionProjectsHelp": "Tous les projets du catalogue Wikimédia sont inclus, dans toutes leurs langues. Les cases sont cochées automatiquement. Pour choisir certains sites seulement, utilisez « Sélection personnalisée ».",
+  "dashboardOriginProjectsHelp": "La collecte est limitée au projet indiqué par le Dashboard. Pour suivre d’autres projets ou langues, choisissez « Sélection personnalisée » ou « Tous les projets Wikimédia ».",
+  "includedProjectFamily": "Projets de {{family}} inclus",
+  "customScopeEmpty": "Aucun projet n’est présélectionné. Cochez les sites ou langues à collecter pour pouvoir lancer la collecte.",
+  "reloadProjectCatalog": "Recharger la liste des projets",
   "scopes": {
     "origin": "Projet(s) de l’action",
     "custom": "Sélection personnalisée",
@@ -356,7 +362,8 @@
       "wikinews": "Wikinews",
       "wikiversity": "Wikiversité",
       "wikivoyage": "Wikivoyage",
-      "special": "Autres sites Wikimédia"
+      "special": "Autres sites Wikimédia",
+      "wikimedia": "Autres sites Wikimédia"
     },
     "projectTable": "Bilan par famille de projets"
   },

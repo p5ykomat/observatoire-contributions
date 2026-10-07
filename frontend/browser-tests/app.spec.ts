@@ -568,6 +568,15 @@ test("projets regroupés par famille, langues recherchables et sélection compl�
     }),
   );
   await imported(page);
+  const allPicker = page.getByRole("group", {
+    name: "Projets inclus dans la collecte",
+    exact: true,
+  });
+  await expect(page.locator(".project-picker")).toHaveCount(1);
+  await expect(allPicker.getByRole("status")).toContainText("6");
+  await expect(
+    allPicker.locator('input[type="checkbox"]:not(:checked)'),
+  ).toHaveCount(0);
   await page
     .getByRole("combobox", { name: "Périmètre de collecte", exact: true })
     .selectOption("custom");
@@ -575,10 +584,12 @@ test("projets regroupés par famille, langues recherchables et sélection compl�
     name: "Projets à analyser",
     exact: true,
   });
+  await expect(page.locator(".project-picker")).toHaveCount(1);
+  await expect(picker.getByRole("status")).toContainText("0");
   await picker.locator("summary").filter({ hasText: "Wikipédia" }).click();
   await expect(
     picker.getByRole("checkbox", { name: /Français \(fr\)/i }),
-  ).toBeChecked();
+  ).not.toBeChecked();
   await picker.getByRole("checkbox", { name: /Anglais \(en\)/i }).check();
   await picker
     .getByRole("button", {
@@ -612,7 +623,15 @@ test("projets regroupés par famille, langues recherchables et sélection compl�
     .filter({ hasText: "Wiktionnaire" })
     .getByRole("checkbox")
     .check();
-  await expect(picker.getByRole("status")).toContainText("5");
+  await expect(picker.getByRole("status")).toContainText("3");
+  await page
+    .getByRole("combobox", { name: "Périmètre de collecte", exact: true })
+    .selectOption("all");
+  await expect(page.locator(".project-picker")).toHaveCount(1);
+  await page
+    .getByRole("combobox", { name: "Périmètre de collecte", exact: true })
+    .selectOption("custom");
+  await expect(picker.getByRole("status")).toContainText("3");
   await page.setViewportSize({ width: 390, height: 844 });
   expect(
     await page.evaluate(
@@ -1036,6 +1055,24 @@ test("dates Dashboard futures à remplacer et nouveaux comptes retenus avec la b
   await expect(
     page.getByLabel("Oui, utiliser ces dates", { exact: true }),
   ).toBeDisabled();
+  await page
+    .getByRole("combobox", { name: "Périmètre de collecte", exact: true })
+    .selectOption("origin");
+  const origin = page.getByRole("group", {
+    name: "Projets d’origine",
+    exact: true,
+  });
+  await expect(page.locator(".project-picker")).toHaveCount(1);
+  await expect(origin.getByRole("status")).toContainText("1");
+  await expect(
+    origin.getByRole("checkbox", { name: /fr.wikipedia.org/ }),
+  ).toBeChecked();
+  await expect(
+    origin.getByRole("checkbox", { name: /fr.wikipedia.org/ }),
+  ).toBeDisabled();
+  await page
+    .getByRole("combobox", { name: "Périmètre de collecte", exact: true })
+    .selectOption("all");
   await expect(
     page.getByLabel("Début de l’action", { exact: true }),
   ).toHaveValue("");

@@ -405,6 +405,10 @@ input[type="file"] {
 .project-family .actions {
   margin-top: 12px;
 }
+.project-family summary input {
+  vertical-align: middle;
+  margin: 0 8px 0 0;
+}
 .project-domain {
   display: block;
   color: var(--muted);
