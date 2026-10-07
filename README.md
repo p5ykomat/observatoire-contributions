@@ -2,10 +2,6 @@
 
 **[Tester l’application en ligne](https://retention-wikimedia.vercel.app/)**, sans installation ni compte.
 
-[Code source sur GitHub](https://github.com/p5ykomat/observatoire-contributions).
-
-Une version hébergée sur **Toolforge** est à venir. Son lien sera ajouté ici lorsqu’elle sera disponible.
-
 Application indépendante en français et en anglais pour analyser les parcours de contribution après une formation, un atelier, un cours ou une campagne. React, TypeScript strict et Vite côté navigateur ; Python, FastAPI, httpx async et Pydantic côté API. Licence **GPL-3.0-or-later**, texte dans `LICENSE`.
 
 ## Fonctionnement
