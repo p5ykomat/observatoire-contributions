@@ -315,9 +315,6 @@ export default function App() {
         a.technical,
       ),
     ).length,
-    fallbackCount = retainedAccounts.filter((account) =>
-      account.providers.includes("fallback"),
-    ).length,
     activeCollection = busy && s.stage === 3,
     changed =
       s.collection_signature !== null &&
@@ -493,11 +490,6 @@ export default function App() {
         <div role="status" className={notice ? "notice" : ""}>
           {translateMessage(notice)}
         </div>
-        {fallbackCount > 0 && (s.stage === 3 || s.stage === 4) && (
-          <p role="status" className="notice">
-            {t("fallbackSummary", { count: fallbackCount })}
-          </p>
-        )}
         {error && (
           <p role="alert" className="error">
             {translateMessage(error)}

@@ -625,7 +625,9 @@ test("pause, reprise et annulation gardent les données", async ({ page }) => {
     page.getByRole("heading", { name: "Atelier de janvier" }),
   ).toBeVisible();
   await expect(
-    page.getByText("La collecte est incomplète.", { exact: false }).first(),
+    page
+      .getByText("La collecte n’est pas terminée pour", { exact: false })
+      .first(),
   ).toBeVisible();
 });
 test("Observatoire uniquement, mobile, clavier et accessibilité", async ({
@@ -1145,6 +1147,16 @@ test("échéance future expliquée, bilan par famille simplifié et retour à Au
   await expect(
     page.getByText("sans bilan définitif à cette échéance", { exact: false }),
   ).toBeVisible();
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  await expect(
+    page.getByText("La collecte est incomplète", { exact: false }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByText(
+      "Comptes entièrement collectés : 2. Comptes à compléter : 0",
+      { exact: false },
+    ),
+  ).toBeVisible();
   const family = page.locator(
     'section[aria-labelledby="family-balance-title"]',
   );
@@ -1441,7 +1453,7 @@ test("dates Dashboard futures à remplacer et nouveaux comptes retenus avec la b
   ).toBeVisible();
 });
 
-test("secours XTools affiché une seule fois avec le nombre de comptes", async ({
+test("un secours réussi reste une collecte complète sans avertissement XTools", async ({
   page,
 }) => {
   await mocks(page);
@@ -1456,16 +1468,93 @@ test("secours XTools affiché une seule fois avec le nombre de comptes", async (
     page
       .getByRole("status")
       .filter({ hasText: "XTools n’a pas répondu pour 2 comptes" }),
-  ).toHaveCount(1);
+  ).toHaveCount(0);
   await expect(
-    page
-      .getByRole("status")
-      .filter({ hasText: "XTools n’a pas répondu pour 2 comptes" }),
+    page.getByText(
+      "Comptes entièrement collectés : 2. Comptes à compléter : 0",
+      { exact: false },
+    ),
   ).toBeVisible();
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  await expect(
+    page.getByText("La collecte est incomplète", { exact: false }),
+  ).toHaveCount(0);
   await page.getByLabel("Langue", { exact: true }).selectOption("en");
   await expect(
     page
       .getByRole("status")
       .filter({ hasText: "XTools did not respond for 2 accounts" }),
-  ).toHaveCount(1);
+  ).toHaveCount(0);
+  await expect(
+    page.getByText("Fully collected accounts: 2", { exact: false }),
+  ).toBeVisible();
+});
+
+test("un échec réel nomme seulement le compte concerné et disparaît après reprise", async ({
+  page,
+}) => {
+  await mocks(page);
+  await page.route("**/api/global-contributions", async (route) => {
+    if (route.request().postDataJSON().username === "Bob")
+      await route.fulfill({ status: 404, json: {} });
+    else await route.fallback();
+  });
+  let unavailable = true;
+  await page.route("**/api/contributions", async (route) => {
+    if (unavailable) await route.fulfill({ status: 404, json: {} });
+    else await route.fallback();
+  });
+  await analyzed(page);
+  const error = page.getByRole("alert");
+  await expect(error).toHaveCount(1);
+  await expect(error).toContainText(
+    "Les contributions d’un compte n’ont pas pu être entièrement récupérées",
+  );
+  await expect(error).toContainText(
+    "Ce compte reste dans les participants retenus",
+  );
+  await error.getByText("Voir les comptes concernés", { exact: true }).click();
+  await expect(error.getByRole("listitem")).toHaveText(["Bob"]);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await mkdir("../output", { recursive: true });
+  await error.screenshot({ path: "../output/collection-failure-fr.png" });
+  await page.setViewportSize({ width: 320, height: 900 });
+  await page.getByLabel("Langue", { exact: true }).selectOption("en");
+  await expect(error).toContainText(
+    "One account’s contributions could not be fully retrieved",
+  );
+  await expect(error.getByRole("listitem")).toHaveText(["Bob"]);
+  await expect
+    .poll(() =>
+      page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+    )
+    .toBe(true);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await error.screenshot({
+    path: "../output/collection-failure-en-mobile.png",
+  });
+  await page.getByLabel("Language", { exact: true }).selectOption("fr");
+  await expect(
+    page.getByText(
+      "Comptes entièrement collectés : 1. Comptes à compléter : 1",
+      { exact: false },
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByText("La collecte est incomplète", { exact: false }),
+  ).toHaveCount(0);
+  unavailable = false;
+  await page
+    .getByRole("button", {
+      name: "Réessayer les comptes incomplets",
+      exact: true,
+    })
+    .click();
+  await expect(error).toHaveCount(0);
+  await expect(
+    page.getByText(
+      "Comptes entièrement collectés : 2. Comptes à compléter : 0",
+      { exact: false },
+    ),
+  ).toBeVisible();
 });

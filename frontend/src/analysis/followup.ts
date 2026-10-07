@@ -96,6 +96,34 @@ export function analyzeFollowup(s: Session) {
     };
   });
   const included = rows.filter((row) => row.included);
+  const incompleteAccounts = sameScope
+    ? included.filter(
+        (row) => !row.account.post_complete || row.account.exists !== true,
+      )
+    : [];
+  const collection = {
+    current: sameScope,
+    completed: sameScope
+      ? included.filter(
+          (row) => row.account.post_complete && row.account.exists === true,
+        ).length
+      : 0,
+    unverified: incompleteAccounts.filter(
+      (row) => !row.account.qualified || row.account.exists !== true,
+    ),
+    unavailable: incompleteAccounts.filter(
+      (row) =>
+        row.account.qualified &&
+        row.account.exists === true &&
+        ["failed", "partial"].includes(row.account.technical),
+    ),
+    unfinished: incompleteAccounts.filter(
+      (row) =>
+        row.account.qualified &&
+        row.account.exists === true &&
+        !["failed", "partial"].includes(row.account.technical),
+    ),
+  };
   const active = included.filter(
     (row) => row.outcome === "contributing",
   ).length;
@@ -151,7 +179,9 @@ export function analyzeFollowup(s: Session) {
     valid,
     enabled,
     reached,
+    future: valid && deadline > dateMs(today()),
     scopeCovered,
+    collection,
     start: valid ? new Date(startMs).toISOString().slice(0, 10) : null,
     end: valid ? new Date(deadline).toISOString().slice(0, 10) : null,
     observedEnd: valid

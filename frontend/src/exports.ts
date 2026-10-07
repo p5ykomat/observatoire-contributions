@@ -4,6 +4,7 @@ import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import i18n from "./i18n";
 import { analyzeFollowup } from "./analysis/followup";
+import { resultNotices } from "./analysis/resultNotices";
 import type { Session } from "./types";
 export function download(blob: Blob, name: string) {
   const url = URL.createObjectURL(blob),
@@ -167,12 +168,11 @@ export function makePDF(s: Session, nominative = false) {
       ? t("fup.interval", { start: r.start!, end: r.end! })
       : t("fup.invalid"),
   );
-  if (!r.complete) paragraph(t("partial"));
-  if (!r.reached && r.valid)
-    paragraph(
-      t("fup.notReached", { date: r.end!, observed: s.params.reference }),
-    );
-  if (!r.scopeCovered) paragraph(t("fup.missingScope"));
+  for (const notice of resultNotices(s, r)) {
+    paragraph(t(notice.key, notice.values));
+    if (nominative && notice.accounts.length)
+      paragraph(notice.accounts.join(", "));
+  }
   table(
     [
       t("retained"),

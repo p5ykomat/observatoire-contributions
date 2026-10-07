@@ -4,6 +4,8 @@ import fr from "./locales/fr.json";
 import en from "./locales/en.json";
 import { emptySession } from "./types";
 import { makePDF } from "./exports";
+import { importNames } from "./imports";
+import { signature } from "./analysis/cohorts";
 
 function leaves(value: unknown, path = ""): Record<string, string> {
   if (typeof value === "string") return { [path]: value };
@@ -46,9 +48,20 @@ it("le rapport PDF est également disponible en anglais", async () => {
   await i18n.changeLanguage("en");
   const session = emptySession();
   session.params.start = session.params.end = "2026-04-03";
+  session.cohort = importNames("Alice").accounts;
+  session.catalog = [
+    {
+      id: "frwiki",
+      domain: "fr.wikipedia.org",
+      family: "wikipedia",
+      label: "French",
+    },
+  ];
+  session.collection_signature = signature(session.params);
   const pdf = makePDF(session).output();
   expect(pdf).toContain("Wikimedia Retention");
   expect(pdf).toContain("Methodology version 1.0");
-  expect(pdf).toContain("Collection is incomplete");
+  expect(pdf).toContain("One included account could not be verified");
+  expect(pdf).not.toContain("Collection is incomplete");
   expect(pdf).not.toContain("Groupe initial");
 });

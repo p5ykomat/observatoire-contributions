@@ -493,6 +493,10 @@ legend {
   border-color: #a33535;
   background: #fff0f0;
 }
+.notice li,
+.error li {
+  overflow-wrap: anywhere;
+}
 details {
   margin: 18px 0;
 }

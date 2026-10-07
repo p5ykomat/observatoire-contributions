@@ -6,6 +6,7 @@ import {
   type FollowupResult,
 } from "../analysis/followup";
 import { exportCSV, exportJSON, exportPDF } from "../exports";
+import { resultNotices } from "../analysis/resultNotices";
 import { CATEGORIES, type FollowupQuestion, type Session } from "../types";
 import { Chart } from "./Chart";
 
@@ -28,6 +29,7 @@ export function Results({
   const [detail, setDetail] = useState<string | null>(null);
   const r = useMemo(() => analyzeFollowup(session), [session]);
   const q = r.question;
+  const notices = resultNotices(session, r);
   const change = (patch: Partial<FollowupQuestion>) =>
     setQuestion({ ...q, ...patch });
   const families = [...new Set(session.catalog.map((p) => p.family))].sort();
@@ -272,15 +274,25 @@ export function Results({
       </section>
       {!r.valid && <p className="notice">{t("fup.invalid")}</p>}
       {!r.enabled && <p className="notice">{t("fup.noProjects")}</p>}
-      {!r.reached && r.valid && (
-        <p className="notice">
-          {t("fup.notReached", {
-            date: r.end!,
-            observed: session.params.reference,
-          })}
-        </p>
-      )}
-      {!r.scopeCovered && <p className="notice">{t("fup.missingScope")}</p>}
+      {notices.map((notice) => (
+        <div
+          key={notice.key}
+          className={notice.error ? "error" : "notice"}
+          role={notice.error ? "alert" : "status"}
+        >
+          <p>{t(notice.key, notice.values)}</p>
+          {notice.accounts.length > 0 && (
+            <details>
+              <summary>{t("fup.affectedAccounts")}</summary>
+              <ul>
+                {notice.accounts.map((name) => (
+                  <li key={name}>{name}</li>
+                ))}
+              </ul>
+            </details>
+          )}
+        </div>
+      ))}
       {(!r.scopeCovered || (!r.reached && q.days === "today")) && (
         <button onClick={recollect}>{t("fup.recollect")}</button>
       )}
@@ -288,14 +300,12 @@ export function Results({
         <p role="status" className="notice">
           {t("noParticipantsResults")}
         </p>
-      ) : (
-        !r.complete && <p className="notice">{t("partial")}</p>
-      )}
+      ) : null}
       <p className="collection-summary">
         {t("resultsCoverage", {
           retained: r.n,
-          complete: r.included.filter((row) => row.complete).length,
-          pending: r.included.filter((row) => !row.complete).length,
+          complete: r.collection.completed,
+          pending: r.n - r.collection.completed,
         })}
       </p>
       <div className="kpis">
