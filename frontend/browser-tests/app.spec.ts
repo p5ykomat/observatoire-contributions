@@ -160,6 +160,14 @@ async function analyzed(page: Page) {
     page.getByRole("heading", { name: "Atelier de janvier", exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Aujourd’hui", exact: true }).click();
+  // Audit the final selected state, after the button's background transition.
+  await page.locator(".deadline-buttons").evaluate(async (element) => {
+    await Promise.all(
+      element
+        .getAnimations({ subtree: true })
+        .map((animation) => animation.finished),
+    );
+  });
 }
 
 test("la collecte interroge les 13 nouveaux comptes retenus puis complète seulement les comptes ajoutés", async ({
