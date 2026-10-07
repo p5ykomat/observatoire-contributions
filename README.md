@@ -77,6 +77,8 @@ Ouvrir alors <http://127.0.0.1:8000>. Redémarrer le backend après le premier b
 
 ## Tests et contrôles
 
+Les tests automatiques utilisent des comptes d’exemple comme Alice et Bob et des réponses API simulées pour vérifier les calculs et les erreurs de collecte. Ces données servent uniquement aux tests et ne sont pas utilisées par l’application publiée. Les analyses utilisent les comptes importés et les contributions publiques récupérées. `frwiki` est l’identifiant technique de Wikipédia en français.
+
 ```powershell
 .\.venv\Scripts\python -m pytest -q
 .\.venv\Scripts\python -m ruff check backend tests scripts

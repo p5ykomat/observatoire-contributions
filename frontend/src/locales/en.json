@@ -317,7 +317,7 @@
     "title": "How many people contributed after the event?",
     "help": "A person is counted once they have made at least one edit in the selected period. J+30 covers the day after the event ends through day 30 inclusive. This total does not mean the person is still contributing on the final day.",
     "deadline": "How far after the event should we look?",
-    "deadlineHelp": "If J+X falls after today, the period has not ended yet. This is not an error: only contributions already observed are shown. Choose “Today” to look at the entire available period since the event ended.",
+    "deadlineHelp": "If J+X falls after today, choose “Today” to avoid errors.",
     "today": "Today",
     "customDays": "Custom number of days after the event ends",
     "interval": "Analysis period: {{start}} through {{end}}, inclusive (UTC).",

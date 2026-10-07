@@ -317,7 +317,7 @@
     "title": "Combien de personnes ont contribué après l’événement ?",
     "help": "Une personne est comptée dès qu’elle a fait au moins une modification dans la période choisie. J+30 couvre le lendemain de la fin de l’événement jusqu’au 30e jour inclus. Ce bilan ne signifie pas que la personne contribue encore le dernier jour.",
     "deadline": "Jusqu’à quand observer les contributions ?",
-    "deadlineHelp": "Si J+X tombe après aujourd’hui, la période n’est pas encore terminée. Ce n’est pas une erreur : seules les contributions déjà observées sont affichées. Choisissez « Aujourd’hui » pour observer toute la période disponible depuis la fin de l’événement.",
+    "deadlineHelp": "Si J+X tombe après aujourd’hui, préférez « Aujourd’hui » pour éviter les erreurs.",
     "today": "Aujourd’hui",
     "customDays": "Nombre de jours personnalisé après la fin de l’événement",
     "interval": "Période analysée : du {{start}} au {{end}} inclus (UTC).",

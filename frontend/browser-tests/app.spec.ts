@@ -1149,8 +1149,10 @@ test("échéance future expliquée, liste des contributeurs et retour à Aujourd
   await analyzed(page);
   await page.getByRole("button", { name: "J+120", exact: true }).click();
   const help = page.locator("#deadline-help");
-  await expect(help).toContainText("Ce n’est pas une erreur");
-  await expect(help).toContainText("Choisissez « Aujourd’hui »");
+  await expect(help).toHaveText(
+    "Si J+X tombe après aujourd’hui, préférez « Aujourd’hui » pour éviter les erreurs.",
+  );
+
   expect(
     await help.evaluate((element) =>
       element.previousElementSibling?.classList.contains("deadline-buttons"),
@@ -1200,7 +1202,9 @@ test("échéance future expliquée, liste des contributeurs et retour à Aujourd
     )
     .toBe(true);
   await page.getByLabel("Langue", { exact: true }).selectOption("en");
-  await expect(help).toContainText("This is not an error");
+  await expect(help).toHaveText(
+    "If J+X falls after today, choose “Today” to avoid errors.",
+  );
   await expect(
     page.getByRole("heading", { name: "Contributor list", exact: true }),
   ).toBeVisible();
