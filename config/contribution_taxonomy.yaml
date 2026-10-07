@@ -1,0 +1,18 @@
+version: '1.0'
+# Namespaces canonical from siteinfo, never guessed from localized titles.
+# Talk spaces are identified by canonical names, main by its empty canonical name.
+community_suffix: 'talk'
+maintenance: [Template, Module, Category, Help, MediaWiki, Project]
+families:
+  wikipedia: { '': CONTENT }
+  wiktionary: { '': CONTENT }
+  wikiquote: { '': CONTENT }
+  wikibooks: { '': CONTENT }
+  wikinews: { '': CONTENT }
+  wikiversity: { '': CONTENT }
+  wikivoyage: { '': CONTENT }
+  wikisource: { '': CONTENT, Page: CONTENT, Index: MAINTENANCE }
+projects:
+  commonswiki: { File: MEDIA }
+  wikidatawiki: { '': STRUCTURED_DATA, Property: STRUCTURED_DATA, Lexeme: STRUCTURED_DATA, EntitySchema: STRUCTURED_DATA }
+default: OTHER

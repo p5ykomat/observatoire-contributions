@@ -1,0 +1,11 @@
+.venv
+frontend/node_modules
+tests
+frontend/browser-tests
+output
+.pytest_cache
+.ruff_cache
+**/__pycache__
+AGENTS.md
+agent.md
+.env*

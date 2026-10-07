@@ -1,0 +1,5 @@
+{
+  "name": "retention-wikimedia-portable", "version": "1.0.0", "private": true,
+  "license": "GPL-3.0-or-later", "engines": { "node": "22.x" },
+  "scripts": { "build": "npm --prefix frontend ci --include=dev && npm --prefix frontend run build" }
+}

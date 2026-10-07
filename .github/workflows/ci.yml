@@ -1,0 +1,24 @@
+name: Vérifications
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.13' }
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - run: pip install -r requirements-dev.txt
+      - run: python -m pytest -q
+      - run: ruff check backend tests scripts
+      - run: npm --prefix frontend ci
+      - run: npm --prefix frontend test
+      - run: npm --prefix frontend run lint
+      - run: npm --prefix frontend run build
+      - run: npx --prefix frontend playwright install --with-deps chromium
+      - run: |
+          uvicorn backend.main:app --host 127.0.0.1 --port 8000 --no-access-log &
+          npm --prefix frontend run dev -- --port 5173 &
+          sleep 3
+          npm --prefix frontend run test:browser
