@@ -57,6 +57,7 @@ export default function App() {
   const customScopeInitialized = useRef(false);
   const importRequest = useRef<AbortController | null>(null);
   const resetDialog = useRef<HTMLDialogElement>(null);
+  const resetCancelButton = useRef<HTMLButtonElement>(null);
   const [csvHeader, setCsvHeader] = useState(true);
   const update = (patch: Partial<Session>) =>
     setS((previous) => ({ ...previous, ...patch }));
@@ -275,8 +276,8 @@ export default function App() {
     resetDialog.current?.close();
   }
   function requestReset() {
-    if (s.cohort.length || s.edits.length) resetDialog.current?.showModal();
-    else resetAnalysis();
+    resetDialog.current?.showModal();
+    resetCancelButton.current?.focus();
   }
   function projectPicker(key: "origins" | "projects") {
     const fixed = key === "origins" && dashboardDates !== null;
@@ -314,7 +315,10 @@ export default function App() {
       s.collection_signature !== null &&
       s.collection_signature !== signature(s.params);
   // Keep the persisted stage IDs compatible with existing JSON archives.
-  const navigationStages = [0, 2, 3, 4, 5];
+  const navigationStages = [0, 2, 3, 4];
+  const steps = t("steps", { returnObjects: true }) as string[];
+  const currentStep = s.stage === 1 ? 0 : navigationStages.indexOf(s.stage);
+  const previousStep = Math.max(0, currentStep - 1);
   function navigate(stage: number) {
     if (stage === 0) update({ stage: s.cohort.length ? 1 : 0 });
     else if (stage === 2 && s.cohort.some((a) => a.included && !a.qualified))
@@ -405,10 +409,6 @@ export default function App() {
           </span>
         </a>
         <div className="header-actions">
-          <button onClick={requestReset}>{t("newAnalysis")}</button>
-          <button disabled={busy} onClick={() => update({ stage: 5 })}>
-            {t("methodology")}
-          </button>
           <label className="language-picker">
             {t("language")}
             <select
@@ -426,28 +426,61 @@ export default function App() {
           </label>
         </div>
       </header>
-      <nav aria-label={t("app")}>
-        {(t("steps", { returnObjects: true }) as string[]).map((step, i) => (
+      <div className="workflow-bar">
+        <nav aria-label={t("app")}>
+          {steps.map((step, i) => (
+            <button
+              key={step}
+              aria-current={
+                s.stage === navigationStages[i] || (i === 0 && s.stage === 1)
+                  ? "step"
+                  : undefined
+              }
+              disabled={
+                activeCollection ||
+                busy ||
+                (i > 0 && !s.cohort.length) ||
+                ((i === 2 || i === 3) && !s.collection_signature)
+              }
+              onClick={() => navigate(navigationStages[i])}
+            >
+              <span>{i + 1}</span>
+              {step}
+            </button>
+          ))}
+        </nav>
+        <div className="analysis-actions">
           <button
-            key={step}
-            aria-current={
-              s.stage === navigationStages[i] || (i === 0 && s.stage === 1)
-                ? "step"
-                : undefined
-            }
-            disabled={
-              activeCollection ||
-              busy ||
-              (i > 0 && i < 4 && !s.cohort.length) ||
-              ((i === 2 || i === 3) && !s.collection_signature)
-            }
-            onClick={() => navigate(navigationStages[i])}
+            className="back-action"
+            disabled={currentStep < 1 || busy}
+            aria-label={t("backToStep", { step: steps[previousStep] })}
+            onClick={() => navigate(navigationStages[previousStep])}
           >
-            <span>{i + 1}</span>
-            {step}
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              aria-hidden="true"
+            >
+              <path d="m12 5-7 7 7 7M5 12h14" />
+            </svg>
+            {t("back")}
           </button>
-        ))}
-      </nav>
+          <button className="new-analysis-action" onClick={requestReset}>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              aria-hidden="true"
+            >
+              <path d="M3 10a9 9 0 1 1 1.5 7M3 4v6h6" />
+            </svg>
+            {t("newAnalysis")}
+          </button>
+        </div>
+      </div>
       <main id="main">
         <div role="status" className={notice ? "notice" : ""}>
           {translateMessage(notice)}
@@ -902,52 +935,6 @@ export default function App() {
             <button onClick={() => update({ stage: 2 })}>{t("steps.1")}</button>
           </>
         )}
-        {s.stage === 5 && (
-          <>
-            <h1>{t("methodology")}</h1>
-            <p className="eyebrow">{t("methodVersion")}</p>
-            <section className="method">
-              {(t("methodText", { returnObjects: true }) as string[]).map(
-                (text, i) => (
-                  <p key={i}>{text}</p>
-                ),
-              )}
-            </section>
-            <p>
-              <a
-                href="https://www.mediawiki.org/wiki/Extension:CentralAuth/API"
-                target="_blank"
-                rel="noreferrer"
-              >
-                CentralAuth
-              </a>{" "}
-              ·{" "}
-              <a
-                href="https://www.mediawiki.org/wiki/API:Usercontribs"
-                target="_blank"
-                rel="noreferrer"
-              >
-                MediaWiki Action API
-              </a>{" "}
-              ·{" "}
-              <a
-                href="https://xtools.wmcloud.org/api"
-                target="_blank"
-                rel="noreferrer"
-              >
-                XTools
-              </a>{" "}
-              ·{" "}
-              <a
-                href="https://outreachdashboard.wmflabs.org"
-                target="_blank"
-                rel="noreferrer"
-              >
-                Programs & Events Dashboard
-              </a>
-            </p>
-          </>
-        )}
       </main>
       <footer>
         <p>{t("privacy")} · GPL-3.0-or-later</p>
@@ -972,7 +959,6 @@ export default function App() {
             </a>
           </p>
         </details>
-        <button onClick={requestReset}>{t("clear")}</button>
       </footer>
       <dialog
         ref={resetDialog}
@@ -982,15 +968,17 @@ export default function App() {
       >
         <h2 id="reset-title">{t("newAnalysis")}</h2>
         <p id="reset-help">{t("resetHelp")}</p>
-        <div className="actions">
+        <button
+          className="backup-action"
+          onClick={() => void import("./exports").then((m) => m.exportJSON(s))}
+        >
+          {t("saveBeforeReset")}
+        </button>
+        <div className="actions reset-actions">
           <button
-            onClick={() =>
-              void import("./exports").then((m) => m.exportJSON(s))
-            }
+            ref={resetCancelButton}
+            onClick={() => resetDialog.current?.close()}
           >
-            {t("saveBeforeReset")}
-          </button>
-          <button autoFocus onClick={() => resetDialog.current?.close()}>
             {t("keepAnalysis")}
           </button>
           <button className="primary" onClick={resetAnalysis}>

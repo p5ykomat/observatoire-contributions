@@ -116,13 +116,49 @@ header {
   color: var(--muted);
   margin-top: 5px;
 }
-nav {
+.workflow-bar {
   display: flex;
   max-width: 1240px;
   margin: 24px auto 0;
-  padding: 0 20px;
+  padding: 0 24px;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+nav {
+  display: flex;
   gap: 6px;
   flex-wrap: wrap;
+}
+.analysis-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-inline-start: auto;
+}
+.analysis-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+.analysis-actions svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.back-action {
+  border-color: transparent;
+  background: transparent;
+  font-weight: 400;
+}
+.reset-dialog {
+  overscroll-behavior: contain;
 }
 nav button {
   border: 0;
@@ -289,6 +325,18 @@ h3 {
 .reset-dialog p,
 .collection-summary {
   line-height: 1.6;
+}
+.backup-action {
+  border-color: transparent;
+  padding-inline: 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.reset-actions {
+  justify-content: flex-end;
+}
+.reset-dialog .reset-actions button {
+  flex: 1 1 190px;
 }
 .hero > p:not(.eyebrow) {
   max-width: 680px;
@@ -711,9 +759,14 @@ footer {
   header button {
     font-size: 12px;
   }
+  .workflow-bar {
+    padding: 0 16px;
+    gap: 12px;
+  }
   nav {
+    width: 100%;
     gap: 0;
-    padding: 0 12px;
+    justify-content: space-between;
   }
   nav button {
     font-size: 12px;

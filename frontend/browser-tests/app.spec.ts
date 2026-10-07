@@ -234,7 +234,7 @@ test("CSV avec sélection de colonne, aperçu et qualification", async ({
   ).toBeVisible();
 });
 
-test("cinq étapes, vérification intégrée à l’import et bilan consultable", async ({
+test("quatre étapes, vérification intégrée à l’import et bilan consultable", async ({
   page,
 }) => {
   await mocks(page);
@@ -250,7 +250,6 @@ test("cinq étapes, vérification intégrée à l’import et bilan consultable"
     "2Paramétrer",
     "3Collecter",
     "4Résultats",
-    "5Méthodologie",
   ]);
   await expect(
     nav.getByRole("button", { name: "2 Paramétrer" }),
@@ -380,11 +379,11 @@ test("archivage puis restauration locale et effacement", async ({ page }) => {
   const download = await downloadPromise;
   const path = await download.path();
   await page
-    .getByRole("button", { name: "Effacer les données de cette analyse" })
+    .getByRole("button", { name: "Nouvelle analyse", exact: true })
     .click();
   await page
     .getByRole("button", {
-      name: "Commencer une nouvelle analyse",
+      name: "Effacer et recommencer",
       exact: true,
     })
     .click();
@@ -399,6 +398,84 @@ test("archivage puis restauration locale et effacement", async ({ page }) => {
     page.getByRole("heading", { name: "Atelier de janvier", exact: true }),
   ).toBeVisible();
   expect(contributions).toBe(0);
+});
+
+test("retour entre les étapes conserve l’analyse et nouvelle analyse protège la saisie", async ({
+  page,
+}) => {
+  await mocks(page);
+  await analyzed(page);
+  await expect(page.locator("header button")).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Méthodologie", exact: true }),
+  ).toHaveCount(0);
+  const apiCalls: string[] = [];
+  page.on("request", (request) => {
+    if (request.url().includes("/api/")) apiCalls.push(request.url());
+  });
+  for (const step of ["Collecter", "Paramétrer", "Importer"]) {
+    await page
+      .getByRole("button", { name: `Retour à ${step}`, exact: true })
+      .click();
+    await expect(page.locator("nav button[aria-current]")).toContainText(step);
+    await expect(
+      page.getByRole("button", { name: "Nouvelle analyse", exact: true }),
+    ).toBeVisible();
+  }
+  await expect(
+    page.getByRole("rowheader", { name: "Alice", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Retour à Importer", exact: true }),
+  ).toBeDisabled();
+  expect(apiCalls).toEqual([]);
+  await page
+    .getByRole("button", { name: "Modifier la liste importée", exact: true })
+    .click();
+  await page
+    .getByLabel("Noms d’utilisateur, un par ligne", { exact: true })
+    .fill("Compte à garder");
+  const reset = page.getByRole("button", {
+    name: "Nouvelle analyse",
+    exact: true,
+  });
+  await reset.click();
+  await expect(page.getByRole("dialog")).toContainText(
+    "effacera les participants, les paramètres et les résultats actuels",
+  );
+  await expect(
+    page.getByRole("button", { name: "Conserver cette analyse", exact: true }),
+  ).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).not.toBeVisible();
+  await expect(reset).toBeFocused();
+  await expect(
+    page.getByRole("textbox", {
+      name: "Noms d’utilisateur, un par ligne",
+      exact: true,
+    }),
+  ).toHaveValue("Compte à garder");
+  await page.setViewportSize({ width: 320, height: 700 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.getByLabel("Langue", { exact: true }).selectOption("en");
+  await page.getByRole("button", { name: "New analysis", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Clear and start again", exact: true }),
+  ).toBeVisible();
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await page
+    .getByRole("button", { name: "Clear and start again", exact: true })
+    .click();
+  await expect(
+    page.getByLabel("Usernames, one per line", { exact: true }),
+  ).toHaveValue("");
+  await expect(page.locator("nav button[aria-current]")).toContainText(
+    "Import",
+  );
 });
 test("pause, reprise et annulation gardent les données", async ({ page }) => {
   await mocks(page, 800);
@@ -760,7 +837,7 @@ test("nouvelle analyse arrête la collecte et efface les anciens résultats", as
     .click();
   await page
     .getByRole("button", {
-      name: "Commencer une nouvelle analyse",
+      name: "Effacer et recommencer",
       exact: true,
     })
     .click();
