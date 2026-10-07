@@ -77,6 +77,8 @@ export function translateMessage(message: string) {
   return message;
 }
 export function isMessage(message: string, key: string) {
-  return ["fr", "en"].some((lng) => message === i18n.t(key, { lng }));
+  return messages.some(
+    (entry) => entry.key === key && entry.pattern.test(message),
+  );
 }
 export default i18n;

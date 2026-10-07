@@ -34,6 +34,7 @@ export function resultNotices(
     for (const [reason, rows, error] of [
       ["collectionUnverified", result.collection.unverified, true],
       ["collectionUnavailable", result.collection.unavailable, true],
+      ["collectionClassification", result.collection.classification, true],
       ["collectionUnfinished", result.collection.unfinished, false],
     ] as const) {
       if (rows.length)

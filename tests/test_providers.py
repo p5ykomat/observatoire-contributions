@@ -185,6 +185,36 @@ async def test_mediawiki_batch_pagination_and_flags(transport):
     assert transport.get.call_args.args[1]["ucend"].endswith("23:59:59Z")
 
 
+async def test_namespace_metadata_is_independent_of_query_service_lag():
+    def handler(request):
+        if "maxlag" in request.url.params:
+            return httpx.Response(200, json={"error": {"code": "maxlag"}})
+        return httpx.Response(
+            200, json={"query": {"namespaces": {"0": {"id": 0, "canonical": ""}}}}
+        )
+
+    catalog = AsyncMock(spec=CatalogProvider)
+    catalog.resolve.return_value = {
+        "id": "wikidatawiki",
+        "domain": "www.wikidata.org",
+        "family": "wikidata",
+    }
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        provider = MediaWikiContributionsProvider(Transport(client), catalog)
+        assert (await provider.namespaces("wikidatawiki"))["namespaces"]["0"]["id"] == 0
+        # Contribution queries still respect database/server lag.
+        with pytest.raises(SourceError) as error:
+            await provider.page(
+                PageRequest(
+                    usernames=["Alice"],
+                    project="wikidatawiki",
+                    start="2026-05-01",
+                    end="2026-07-01",
+                )
+            )
+        assert error.value.status == 503
+
+
 async def test_xtools_timestamp_pagination(transport):
     transport.get.return_value = {
         "globalcontribs": [{"rev_id": 4}],

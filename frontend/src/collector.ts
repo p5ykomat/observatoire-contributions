@@ -254,6 +254,11 @@ export class Collector {
         "namespaces/" + encodeURIComponent(project),
       );
       this.session.namespaces[project] = result.namespaces;
+      // Raw contributions survive metadata failures. Reclassify them when
+      // metadata becomes available, including rows restored from an archive.
+      for (const edit of this.session.edits)
+        if (edit.project === project)
+          edit.category = classify(this.session, project, edit.namespace);
     }
   }
   add(edits: Edit[]) {
@@ -342,7 +347,6 @@ export class Collector {
                 });
                 continue;
               }
-              await this.namespaces(wiki.id);
               edits.push({
                 username: row.username ?? task.usernames[0],
                 project: wiki.id,
@@ -357,6 +361,22 @@ export class Collector {
               });
             }
             this.add(edits);
+            for (const project of new Set(edits.map((edit) => edit.project))) {
+              try {
+                await this.namespaces(project);
+              } catch (error) {
+                if (this.stopped) throw error;
+                const warning = i18n.t("collectionNamespaceUnavailable", {
+                  project: this.session.catalog.find(
+                    (wiki) => wiki.id === project,
+                  )!.domain,
+                });
+                accounts.forEach((account) => {
+                  if (!account.warnings.includes(warning))
+                    account.warnings.push(warning);
+                });
+              }
+            }
             cursor = page.cursor;
           }
           accounts.forEach((a) => {

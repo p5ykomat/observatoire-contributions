@@ -5,8 +5,24 @@ import { analyzeFollowup } from "./analysis/followup";
 import { resultNotices } from "./analysis/resultNotices";
 import { makePDF } from "./exports";
 import { signature } from "./analysis/cohorts";
+import i18n from "./i18n";
 
 afterEach(() => vi.useRealTimers());
+
+it("une panne de classement indique la donnée manquante et conserve les contributions", () => {
+  const s = fixture();
+  s.cohort[0].post_complete = false;
+  s.cohort[0].technical = "partial";
+  s.cohort[0].warnings = [
+    i18n.t("collectionNamespaceUnavailable", { project: "www.wikidata.org" }),
+  ];
+  s.edits = [edit("2021-01-03")];
+  const result = analyzeFollowup(s);
+  expect(result.totalEdits).toBe(1);
+  expect(resultNotices(s, result).map((n) => [n.key, n.accounts])).toEqual([
+    ["fup.collectionClassification", ["Alice"]],
+  ]);
+});
 
 function fixture() {
   const s = emptySession();

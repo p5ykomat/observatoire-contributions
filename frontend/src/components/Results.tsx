@@ -7,6 +7,7 @@ import {
 } from "../analysis/followup";
 import { exportCSV, exportJSON, exportPDF } from "../exports";
 import { resultNotices } from "../analysis/resultNotices";
+import { isMessage, translateMessage } from "../i18n";
 import { CATEGORIES, type FollowupQuestion, type Session } from "../types";
 import { Chart } from "./Chart";
 
@@ -286,7 +287,21 @@ export function Results({
               <summary>{t("fup.affectedAccounts")}</summary>
               <ul>
                 {notice.accounts.map((name) => (
-                  <li key={name}>{name}</li>
+                  <li key={name}>
+                    {name}
+                    {session.cohort
+                      .find((account) => account.username === name)
+                      ?.warnings.filter(
+                        (warning) =>
+                          !isMessage(warning, "partial") &&
+                          !isMessage(warning, "fallback"),
+                      )
+                      .map((warning) => (
+                        <small className="category-example" key={warning}>
+                          {translateMessage(warning)}
+                        </small>
+                      ))}
+                  </li>
                 ))}
               </ul>
             </details>

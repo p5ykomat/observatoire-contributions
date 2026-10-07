@@ -248,6 +248,81 @@ it("une pagination interrompue conserve ses données partielles", async () => {
   expect(s.cohort[0].technical).toBe("partial");
   expect(s.cohort[0].post_complete).toBe(false);
 });
+
+it("un échec de métadonnées Wikidata conserve toute la page XTools et se répare sans doublon", async () => {
+  const s = session();
+  s.cohort = s.cohort.slice(0, 1);
+  s.catalog.push({
+    id: "wikidatawiki",
+    domain: "www.wikidata.org",
+    family: "wikidata",
+    label: "Wikidata",
+  });
+  s.taxonomy!.projects.wikidatawiki = { "": "STRUCTURED_DATA" };
+  let metadataUnavailable = true;
+  const called: string[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string) => {
+      called.push(url);
+      if (url.includes("namespaces/wikidatawiki"))
+        return metadataUnavailable
+          ? new Response("{}", { status: 404 })
+          : Response.json({ namespaces: { "0": { id: 0, canonical: "" } } });
+      if (url.includes("global-contributions"))
+        return Response.json({
+          rows: [
+            {
+              username: "Alice",
+              project: "fr.wikipedia.org",
+              rev_id: 1,
+              timestamp: "2021-01-03T00:00:00Z",
+              namespace: 0,
+              page_title: "Article",
+            },
+            {
+              username: "Alice",
+              project: "www.wikidata.org",
+              rev_id: 2,
+              timestamp: "2021-01-04T00:00:00Z",
+              namespace: 0,
+              page_title: "Q1",
+            },
+            {
+              username: "Alice",
+              project: "fr.wikipedia.org",
+              rev_id: 3,
+              timestamp: "2021-01-05T00:00:00Z",
+              namespace: 0,
+              page_title: "Autre article",
+            },
+          ],
+          cursor: null,
+        });
+      throw new Error(
+        "Une panne de métadonnées ne doit pas relancer les contributions par un autre fournisseur",
+      );
+    }),
+  );
+  let collector = new Collector(s, () => {});
+  await collector.prepare();
+  await collector.run();
+  expect(s.edits).toHaveLength(3);
+  expect(s.cohort[0].providers).toEqual(["xtools"]);
+  expect(s.cohort[0].post_complete).toBe(false);
+  expect(s.cohort[0].warnings[0]).toContain("www.wikidata.org");
+  expect(called.some((url) => url.includes("local-accounts"))).toBe(false);
+  metadataUnavailable = false;
+  collector = new Collector(s, () => {});
+  await collector.prepare(true);
+  await collector.run();
+  expect(s.edits).toHaveLength(3);
+  expect(s.edits.find((e) => e.project === "wikidatawiki")?.category).toBe(
+    "STRUCTURED_DATA",
+  );
+  expect(s.cohort[0].post_complete).toBe(true);
+  expect(s.cohort[0].warnings).toEqual([]);
+});
 it("les comptes MediaWiki sont regroupés par projet", async () => {
   const s = session();
   s.params.scope = "custom";

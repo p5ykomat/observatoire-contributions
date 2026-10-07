@@ -1,5 +1,6 @@
 import { defaultQuestion, today, type Session, type Project } from "../types";
 import { dateMs, DAY, segment, selected, signature } from "./cohorts";
+import { isMessage } from "../i18n";
 
 export const wikipediaLanguage = (project: Project) =>
   project.domain.split(".")[0];
@@ -115,7 +116,20 @@ export function analyzeFollowup(s: Session) {
       (row) =>
         row.account.qualified &&
         row.account.exists === true &&
-        ["failed", "partial"].includes(row.account.technical),
+        ["failed", "partial"].includes(row.account.technical) &&
+        (!row.account.warnings.length ||
+          !row.account.warnings.every((warning) =>
+            isMessage(warning, "collectionNamespaceUnavailable"),
+          )),
+    ),
+    classification: incompleteAccounts.filter(
+      (row) =>
+        row.account.qualified &&
+        row.account.exists === true &&
+        row.account.warnings.length > 0 &&
+        row.account.warnings.every((warning) =>
+          isMessage(warning, "collectionNamespaceUnavailable"),
+        ),
     ),
     unfinished: incompleteAccounts.filter(
       (row) =>

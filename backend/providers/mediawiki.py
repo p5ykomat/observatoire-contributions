@@ -18,7 +18,6 @@ class MediaWikiContributionsProvider:
                 "formatversion": 2,
                 "meta": "siteinfo",
                 "siprop": "namespaces",
-                "maxlag": 5,
             },
             "mediawiki",
         )
