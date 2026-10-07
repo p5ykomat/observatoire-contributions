@@ -22,6 +22,10 @@ MediaWiki utilise `uccontinue`. XTools utilise son champ `continue`, un timestam
 
 Le navigateur effectue au maximum trois nouvelles tentatives après la première demande. Il attend le maximum entre `Retry-After` et un backoff exponentiel avec jitter. Les formats numérique et HTTP-date de `Retry-After` sont pris en charge. La pause bloque la demande suivante, l’annulation utilise `AbortController`. Le backend ne dort pas pendant un cooldown long et ne garde aucune tâche nominative.
 
+Les demandes de contributions lancées dans le navigateur indiquent `interactive=true`. Elles omettent le paramètre facultatif `maxlag`, conformément à la [documentation MediaWiki pour les tâches interactives](https://www.mediawiki.org/wiki/Manual:Maxlag_parameter). Cela évite de bloquer les historiques Wikidata à cause du retard de WDQS, qui ne sert pas ces historiques. Les autres appelants gardent `maxlag=5` par défaut. Les réponses 429, 503 et leurs délais `Retry-After` restent respectés dans les deux cas, y compris lorsque l’erreur est portée par un JSON HTTP 200.
+
+Chaque page de contributions est conservée avant de charger les espaces de noms. Une panne de ces métadonnées n’interrompt pas la pagination et ne déclenche pas une deuxième récupération des mêmes contributions. L’avertissement identifie le projet et uniquement les comptes dont des révisions doivent encore être classées. Dès que les espaces de noms redeviennent accessibles, les révisions conservées sont reclassées sans doublon ; une récupération réussie sur une page suivante efface l’avertissement correspondant.
+
 Le cache partagé Python a un TTL d’une heure et contient exclusivement `sitematrix` et `siteinfo/namespaces`. Les métadonnées de comptes et les contributions restent dans la session client. Le nombre total de visiteurs n’est pas coordonné par un verrou distribué : respecter les conditions des sources et dimensionner l’hébergement en conséquence.
 
 ## Modèles et archivage

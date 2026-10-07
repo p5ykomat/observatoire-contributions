@@ -64,9 +64,14 @@ class Transport:
         if not isinstance(data, dict):
             raise SourceError(provider, 502)
         if "error" in data:
-            code = data["error"].get("code", "")
+            error = data["error"]
+            if not isinstance(error, dict):
+                raise SourceError(provider, 502)
+            code = error.get("code", "")
             raise SourceError(
-                provider, 503 if code in {"maxlag", "ratelimited", "readonly"} else 502, 5
+                provider,
+                503 if code in {"maxlag", "ratelimited", "readonly"} else 502,
+                max(5, retry_delay(response.headers.get("Retry-After"))),
             )
         if public:
             self.public_cache[cache_key] = (time.monotonic(), data)

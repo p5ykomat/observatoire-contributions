@@ -37,6 +37,7 @@ class PageRequest(BatchRequest):
     start: date
     end: date
     cursor: str | None = Field(default=None, max_length=1000)
+    interactive: bool = False
 
     @model_validator(mode="after")
     def dates(self):

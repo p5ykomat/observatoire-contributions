@@ -1,5 +1,15 @@
 # Vérification du 7 octobre 2026
 
+## État final contrôlé
+
+45 tests backend et 77 tests frontend réussis, Ruff et formatage Python, ESLint, TypeScript strict et build réussis. Les 23 parcours navigateur couvrent les imports, les exclusions, les dates réelles, les nouveaux comptes, les trois périmètres, la collecte des seuls comptes retenus, pause et reprise, les erreurs réelles, les secours, les résultats cumulatifs, les exports, le changement de langue, la navigation et la remise à zéro. Le PDF agrégé a été rendu et ses quatre pages inspectées. Les chiffres CSV et JSON concordent ; le PDF agrégé ne contient aucun nom de participant.
+
+Une collecte réelle depuis le site public, avec les paramètres de Lille demandés (début au 1er mai, fin au 1er juillet, créations du 1er janvier au 1er juin 2026, nouveaux comptes, tous les projets), a récupéré intégralement les 13 comptes retenus. Aucun compte incomplet, aucune donnée insuffisante et toutes les réponses API HTTP 200. Les contributions Wikidata de mai sont récupérées et classées comme données structurées ; elles précèdent la fin de l’exercice et ne figurent donc pas dans le bilan après le 1er juillet.
+
+Le chemin MediaWiki conserve désormais lui aussi les pages brutes avant leur classement. Les régressions testent une panne d’espaces de noms Wikidata sur plusieurs pages, sa reprise sans doublon, le classement réparé sur une page suivante et l’absence d’avertissement pour un compte sans révision à classer. Les lectures interactives utilisent le réglage prévu par MediaWiki ; les appels non interactifs conservent `maxlag=5`. Le respect de `Retry-After` dans les erreurs JSON HTTP 200 est testé séparément.
+
+Le dépôt public indique le lien universel du site dans son README et dans son champ Website. Le site et Atlas renvoient vers ce dépôt. L’ancien dépôt ne répond plus sous son ancienne adresse. Le README ne contient plus les sections de déploiement retirées à la demande de l’utilisateur. Les fichiers de consignes personnelles restent exclus de Git et des déploiements.
+
 ## Contrôles locaux
 
 Sélection appliquée à la collecte : 66 tests Vitest réussis, dont les trois périmètres avec 18 comptes importés, trois exclus, deux anciens et 13 nouveaux retenus. Seuls les 13 comptes font l’objet de requêtes de contributions. Une ancienne file de collecte est filtrée, les curseurs sont conservés pour les comptes déjà en cours et les comptes ajoutés démarrent sans reprendre le curseur d’un autre compte. La réintégration complète les données manquantes sans réinterroger les comptes terminés dans le même périmètre ; un changement de dates invalide aussi la couverture des comptes momentanément exclus. Parcours navigateur dédié : compteur et barre à 13, exactement 13 noms interrogés, passage à « Tout le monde » puis seulement deux requêtes supplémentaires. Le parcours complet avec exports et la remise à zéro pendant une collecte restent validés.
@@ -36,7 +46,7 @@ Nouvelle requête publique du Dashboard et de CentralAuth sur les 15 comptes non
 
 Le programme Formation ED Lille avril 2026 expose un début au 26 février 2026 en UTC et une fin en 2052. L’événement réel confirmé par l’utilisateur est le 3 avril 2026. Les dates publiques de création des 18 comptes ont été vérifiées. Avec trois comptes d’organisation exclus et une fenêtre du 20 mars au 13 avril inclus, 12 comptes correspondent à la sélection de nouveaux comptes. Une fin future du Dashboard ne peut être utilisée comme fin de cet événement.
 
-L’import réel du programme est fonctionnel. Les données publiques peuvent demeurer indisponibles ponctuellement. Le secours XTools est affiché une seule fois avec le nombre de comptes concernés. La couverture reste explicite, sans assimiler un échec à une inactivité.
+L’import réel du programme est fonctionnel. Les données publiques peuvent demeurer indisponibles ponctuellement. Un secours réussi ne produit aucun avertissement. Un échec réel indique les comptes concernés et permet une reprise, sans assimiler l’échec à une inactivité.
 
 ## Publication
 

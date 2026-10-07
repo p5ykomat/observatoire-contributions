@@ -1559,80 +1559,122 @@ test("un échec réel nomme seulement le compte concerné et disparaît après r
   ).toBeVisible();
 });
 
-test("une panne de types de pages conserve les éditions et explique le projet concerné", async ({
-  page,
-}) => {
-  await mocks(page);
-  await page.route("**/api/global-contributions", async (route) => {
-    if (route.request().postDataJSON().username !== "Alice")
-      return route.fallback();
-    await route.fulfill({
-      json: {
-        rows: [
-          {
-            username: "Alice",
-            project: "fr.wikipedia.org",
-            rev_id: 1,
-            timestamp: "2021-01-04T12:00:00Z",
-            namespace: 0,
-            page_title: "Article",
-          },
-          {
-            username: "Alice",
-            project: "www.wikidata.org",
-            rev_id: 2,
-            timestamp: "2021-01-05T12:00:00Z",
-            namespace: 0,
-            page_title: "Q1",
-          },
-        ],
-        cursor: null,
-      },
+for (const fallback of [false, true]) {
+  test(`une panne de types de pages conserve les éditions (${fallback ? "secours MediaWiki" : "XTools"}) et explique le projet concerné`, async ({
+    page,
+  }) => {
+    await mocks(page);
+    await page.route("**/api/global-contributions", async (route) => {
+      if (route.request().postDataJSON().username !== "Alice")
+        return route.fallback();
+      if (fallback) return route.fulfill({ status: 404, json: {} });
+      await route.fulfill({
+        json: {
+          rows: [
+            {
+              username: "Alice",
+              project: "fr.wikipedia.org",
+              rev_id: 1,
+              timestamp: "2021-01-04T12:00:00Z",
+              namespace: 0,
+              page_title: "Article",
+            },
+            {
+              username: "Alice",
+              project: "www.wikidata.org",
+              rev_id: 2,
+              timestamp: "2021-01-05T12:00:00Z",
+              namespace: 0,
+              page_title: "Q1",
+            },
+          ],
+          cursor: null,
+        },
+      });
     });
+    if (fallback) {
+      await page.route("**/api/local-accounts", async (route) => {
+        if (!route.request().postDataJSON().usernames.includes("Alice"))
+          return route.fallback();
+        await route.fulfill({
+          json: {
+            merged: [
+              { wiki: "frwiki", editcount: 1 },
+              { wiki: "wikidatawiki", editcount: 1 },
+            ],
+          },
+        });
+      });
+      await page.route("**/api/contributions", async (route) => {
+        const body = route.request().postDataJSON();
+        expect(body.interactive).toBe(true);
+        await route.fulfill({
+          json: {
+            contributions: [
+              {
+                username: "Alice",
+                project: body.project,
+                revision: body.project === "frwiki" ? 1 : 2,
+                timestamp: "2021-01-05T12:00:00Z",
+                namespace: 0,
+                title: "Page",
+                category: "OTHER",
+                automation: "normal",
+                tags: [],
+                provider: "mediawiki",
+              },
+            ],
+            cursor: null,
+          },
+        });
+      });
+    }
+    let unavailable = true;
+    await page.route("**/api/namespaces/wikidatawiki", async (route) => {
+      if (unavailable) await route.fulfill({ status: 404, json: {} });
+      else await route.fallback();
+    });
+    await analyzed(page);
+    const alert = page.getByRole("alert");
+    await expect(alert).toContainText(
+      "Les contributions d’un compte ont été récupérées",
+    );
+    await alert
+      .getByText("Voir les comptes concernés", { exact: true })
+      .click();
+    await expect(alert.getByRole("listitem")).toContainText("Alice");
+    await expect(alert.getByRole("listitem")).toContainText(
+      "les types de pages de www.wikidata.org",
+    );
+    await alert.screenshot({ path: "../output/metadata-error-fr.png" });
+    await page.setViewportSize({ width: 320, height: 900 });
+    await page.getByLabel("Langue", { exact: true }).selectOption("en");
+    await expect(alert.getByRole("listitem")).toContainText(
+      "page types for www.wikidata.org",
+    );
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+    await alert.screenshot({ path: "../output/metadata-error-en-mobile.png" });
+    await page.getByLabel("Language", { exact: true }).selectOption("fr");
+    await expect(
+      page
+        .locator(".kpis > div")
+        .filter({ hasText: "Contributions éligibles observées" })
+        .getByText("4", { exact: true }),
+    ).toBeVisible();
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+    unavailable = false;
+    await page
+      .getByRole("button", {
+        name: "Réessayer les comptes incomplets",
+        exact: true,
+      })
+      .click();
+    await expect(alert).toHaveCount(0);
+    await expect(
+      page
+        .locator(".kpis > div")
+        .filter({ hasText: "Contributions éligibles observées" })
+        .getByText("4", { exact: true }),
+    ).toBeVisible();
   });
-  let unavailable = true;
-  await page.route("**/api/namespaces/wikidatawiki", async (route) => {
-    if (unavailable) await route.fulfill({ status: 404, json: {} });
-    else await route.fallback();
-  });
-  await analyzed(page);
-  const alert = page.getByRole("alert");
-  await expect(alert).toContainText(
-    "Les contributions d’un compte ont été récupérées",
-  );
-  await alert.getByText("Voir les comptes concernés", { exact: true }).click();
-  await expect(alert.getByRole("listitem")).toContainText("Alice");
-  await expect(alert.getByRole("listitem")).toContainText(
-    "les types de pages de www.wikidata.org",
-  );
-  await alert.screenshot({ path: "../output/metadata-error-fr.png" });
-  await page.setViewportSize({ width: 320, height: 900 });
-  await page.getByLabel("Langue", { exact: true }).selectOption("en");
-  await expect(alert.getByRole("listitem")).toContainText(
-    "page types for www.wikidata.org",
-  );
-  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
-  await alert.screenshot({ path: "../output/metadata-error-en-mobile.png" });
-  await page.getByLabel("Language", { exact: true }).selectOption("fr");
-  await expect(
-    page
-      .locator(".kpis > div")
-      .filter({ hasText: "Contributions éligibles observées" })
-      .getByText("4", { exact: true }),
-  ).toBeVisible();
-  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
-  unavailable = false;
-  await page
-    .getByRole("button", {
-      name: "Réessayer les comptes incomplets",
-      exact: true,
-    })
-    .click();
-  await expect(alert).toHaveCount(0);
-  await expect(
-    page
-      .locator(".kpis > div")
-      .filter({ hasText: "Contributions éligibles observées" })
-      .getByText("4", { exact: true }),
-  ).toBeVisible();
-});
+}

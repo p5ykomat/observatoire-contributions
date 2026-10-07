@@ -36,8 +36,13 @@ class MediaWikiContributionsProvider:
             "ucdir": "newer",
             "uclimit": 500,
             "ucprop": "ids|title|timestamp|flags|tags",
-            "maxlag": 5,
         }
+        # User-triggered interactive reads may omit maxlag. On Wikidata it
+        # also reflects WDQS lag, even though usercontribs does not use WDQS.
+        # Background callers keep the recommended conservative default.
+        # https://www.mediawiki.org/wiki/Manual:Maxlag_parameter
+        if not request.interactive:
+            params["maxlag"] = 5
         if request.cursor:
             params["uccontinue"] = request.cursor
         data = await self.transport.get(f"https://{wiki['domain']}/w/api.php", params, "mediawiki")

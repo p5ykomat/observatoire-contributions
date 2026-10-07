@@ -2,7 +2,7 @@ import { api, retry } from "./api";
 import { dateMs, DAY, signature } from "./analysis/cohorts";
 import { classify } from "./analysis/taxonomy";
 import { aggregate } from "./analysis/aggregation";
-import i18n, { isMessage } from "./i18n";
+import i18n, { isMessage, translateMessage } from "./i18n";
 import {
   type Account,
   type Edit,
@@ -260,6 +260,35 @@ export class Collector {
         if (edit.project === project)
           edit.category = classify(this.session, project, edit.namespace);
     }
+    const warning = i18n.t("collectionNamespaceUnavailable", {
+      project: this.session.catalog.find((wiki) => wiki.id === project)!.domain,
+    });
+    for (const account of this.session.cohort) {
+      if (
+        !account.warnings.some(
+          (existing) => translateMessage(existing) === warning,
+        )
+      )
+        continue;
+      account.warnings = account.warnings.filter(
+        (existing) => translateMessage(existing) !== warning,
+      );
+      // Shared metadata can also finish an earlier account whose revision
+      // pages were already complete. Outstanding retrieval still blocks it.
+      if (
+        !account.warnings.length &&
+        account.technical === "partial" &&
+        !this.session.queue.some((task) =>
+          task.usernames.includes(account.username),
+        )
+      ) {
+        account.pre_complete = true;
+        account.post_complete = true;
+        account.technical = account.providers.includes("fallback")
+          ? "completed_fallback"
+          : "completed_primary";
+      }
+    }
   }
   add(edits: Edit[]) {
     for (const e of edits) {
@@ -268,6 +297,34 @@ export class Collector {
         e.category = classify(this.session, e.project, e.namespace);
         this.session.edits.push(e);
         this.editKeys.add(key);
+      }
+    }
+  }
+  async classifyProjects(edits: Edit[], accounts: Account[]) {
+    for (const project of new Set(edits.map((edit) => edit.project))) {
+      const warning = i18n.t("collectionNamespaceUnavailable", {
+        project: this.session.catalog.find((wiki) => wiki.id === project)!
+          .domain,
+      });
+      try {
+        await this.namespaces(project);
+      } catch (error) {
+        if (this.stopped) throw error;
+        accounts
+          .filter((account) =>
+            edits.some(
+              (edit) =>
+                edit.project === project && edit.username === account.username,
+            ),
+          )
+          .forEach((account) => {
+            if (
+              !account.warnings.some(
+                (existing) => translateMessage(existing) === warning,
+              )
+            )
+              account.warnings.push(warning);
+          });
       }
     }
   }
@@ -307,7 +364,6 @@ export class Collector {
         try {
           let cursor: string | null = null;
           if (task.provider === "mediawiki") {
-            await this.namespaces(task.project!);
             const page = await this.call<MWPage>(
               "contributions",
               {
@@ -316,10 +372,12 @@ export class Collector {
                 start,
                 end: task.end ?? p.reference,
                 cursor: task.cursor,
+                interactive: true,
               },
               task.usernames,
             );
             this.add(page.contributions);
+            await this.classifyProjects(page.contributions, accounts);
             cursor = page.cursor;
           } else {
             const page = await this.call<{
@@ -361,22 +419,7 @@ export class Collector {
               });
             }
             this.add(edits);
-            for (const project of new Set(edits.map((edit) => edit.project))) {
-              try {
-                await this.namespaces(project);
-              } catch (error) {
-                if (this.stopped) throw error;
-                const warning = i18n.t("collectionNamespaceUnavailable", {
-                  project: this.session.catalog.find(
-                    (wiki) => wiki.id === project,
-                  )!.domain,
-                });
-                accounts.forEach((account) => {
-                  if (!account.warnings.includes(warning))
-                    account.warnings.push(warning);
-                });
-              }
-            }
+            await this.classifyProjects(edits, accounts);
             cursor = page.cursor;
           }
           accounts.forEach((a) => {

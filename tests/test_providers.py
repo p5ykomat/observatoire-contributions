@@ -189,6 +189,23 @@ async def test_namespace_metadata_is_independent_of_query_service_lag():
     def handler(request):
         if "maxlag" in request.url.params:
             return httpx.Response(200, json={"error": {"code": "maxlag"}})
+        if request.url.params.get("list") == "usercontribs":
+            return httpx.Response(
+                200,
+                json={
+                    "query": {
+                        "usercontribs": [
+                            {
+                                "user": "Alice",
+                                "revid": 4,
+                                "timestamp": "2026-05-14T23:39:36Z",
+                                "ns": 0,
+                                "title": "Q1",
+                            }
+                        ]
+                    }
+                },
+            )
         return httpx.Response(
             200, json={"query": {"namespaces": {"0": {"id": 0, "canonical": ""}}}}
         )
@@ -213,6 +230,41 @@ async def test_namespace_metadata_is_independent_of_query_service_lag():
                 )
             )
         assert error.value.status == 503
+        result = await provider.page(
+            PageRequest(
+                usernames=["Alice"],
+                project="wikidatawiki",
+                start="2026-05-01",
+                end="2026-07-01",
+                interactive=True,
+            )
+        )
+        assert result["contributions"][0]["revision"] == 4
+
+
+async def test_mediawiki_json_error_respects_retry_after():
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(
+            lambda request: httpx.Response(
+                200, headers={"Retry-After": "120"}, json={"error": {"code": "maxlag"}}
+            )
+        )
+    ) as client:
+        with pytest.raises(SourceError) as error:
+            await Transport(client).get("https://www.wikidata.org/w/api.php", None, "mediawiki")
+        assert error.value.status == 503
+        assert error.value.retry_after == 120
+
+
+async def test_malformed_mediawiki_error_is_a_source_error():
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(
+            lambda request: httpx.Response(200, json={"error": "unavailable"})
+        )
+    ) as client:
+        with pytest.raises(SourceError) as error:
+            await Transport(client).get("https://www.wikidata.org/w/api.php", None, "mediawiki")
+        assert error.value.status == 502
 
 
 async def test_xtools_timestamp_pagination(transport):

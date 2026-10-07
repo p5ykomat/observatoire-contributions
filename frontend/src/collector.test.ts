@@ -337,6 +337,166 @@ it("les comptes MediaWiki sont regroupés par projet", async () => {
   expect(s.queue).toHaveLength(1);
   expect(s.queue[0].usernames).toEqual(["Alice", "Bob"]);
 });
+it("les métadonnées obtenues pour le compte suivant complètent aussi le précédent", async () => {
+  const s = session();
+  delete s.namespaces.frwiki;
+  let metadataRequests = 0;
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string, init: RequestInit) => {
+      if (url.includes("namespaces/frwiki"))
+        return ++metadataRequests === 1
+          ? new Response("{}", { status: 404 })
+          : Response.json({ namespaces: { "0": { id: 0, canonical: "" } } });
+      const body = JSON.parse(init.body as string);
+      return Response.json({
+        rows: [
+          {
+            username: body.username,
+            project: "fr.wikipedia.org",
+            rev_id: body.username === "Alice" ? 1 : 2,
+            timestamp: "2021-01-03T00:00:00Z",
+            namespace: 0,
+            page_title: "Article",
+          },
+        ],
+        cursor: null,
+      });
+    }),
+  );
+  s.queue = s.cohort.map((account) => ({
+    provider: "xtools",
+    usernames: [account.username],
+    attempts: 0,
+  }));
+  await new Collector(s, () => {}).run();
+  expect(s.edits).toHaveLength(2);
+  expect(
+    s.cohort.every(
+      (account) => account.post_complete && !account.warnings.length,
+    ),
+  ).toBe(true);
+  expect(aggregate(s).complete).toBe(true);
+});
+it.each([false, true])(
+  "MediaWiki (secours %s) conserve les pages Wikidata malgré une panne de classement",
+  async (fallback) => {
+    const s = session();
+    s.catalog.push({
+      id: "wikidatawiki",
+      domain: "www.wikidata.org",
+      family: "wikidata",
+      label: "Wikidata",
+    });
+    s.taxonomy!.projects.wikidatawiki = { "": "STRUCTURED_DATA" };
+    let metadataUnavailable = true;
+    const cursors: (string | undefined)[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init: RequestInit) => {
+        if (url.includes("namespaces/wikidatawiki"))
+          return metadataUnavailable
+            ? new Response("{}", { status: 404 })
+            : Response.json({ namespaces: { "0": { id: 0, canonical: "" } } });
+        expect(url).toContain("contributions");
+        const body = JSON.parse(init.body as string);
+        expect(body.interactive).toBe(true);
+        cursors.push(body.cursor);
+        return Response.json({
+          contributions: [
+            {
+              username: "Alice",
+              project: "wikidatawiki",
+              revision: body.cursor ? 2 : 1,
+              timestamp: "2021-01-03T00:00:00Z",
+              namespace: 0,
+              title: "Q1",
+              category: "OTHER",
+              automation: "normal",
+              tags: [],
+              provider: "mediawiki",
+            },
+          ],
+          cursor: body.cursor ? null : "next",
+        });
+      }),
+    );
+    const task = {
+      provider: "mediawiki" as const,
+      usernames: ["Alice", "Bob"],
+      project: "wikidatawiki",
+      fallback,
+      attempts: 0,
+    };
+    s.queue = [task];
+    await new Collector(s, () => {}).run();
+    expect(cursors).toEqual([undefined, "next"]);
+    expect(s.edits).toHaveLength(2);
+    expect(s.cohort[0].warnings).toHaveLength(1);
+    expect(s.cohort[0].warnings[0]).toContain("www.wikidata.org");
+    expect(s.cohort[0].post_complete).toBe(false);
+    // No missing classification can affect a participant with no revisions.
+    expect(s.cohort[1].post_complete).toBe(true);
+    expect(s.cohort[1].warnings).toEqual([]);
+    metadataUnavailable = false;
+    s.cohort[0].warnings = [];
+    s.queue = [{ ...task, usernames: ["Alice"] }];
+    await new Collector(s, () => {}).run();
+    expect(s.edits).toHaveLength(2);
+    expect(s.edits.every((edit) => edit.category === "STRUCTURED_DATA")).toBe(
+      true,
+    );
+    expect(s.cohort[0].post_complete).toBe(true);
+    expect(s.cohort[0].technical).toBe(
+      fallback ? "completed_fallback" : "completed_primary",
+    );
+  },
+);
+it("un classement rétabli sur la page suivante répare aussi les contributions précédentes", async () => {
+  const s = session();
+  delete s.namespaces.frwiki;
+  let metadataRequests = 0;
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string, init: RequestInit) => {
+      if (url.includes("namespaces/frwiki"))
+        return ++metadataRequests === 1
+          ? new Response("{}", { status: 404 })
+          : Response.json({ namespaces: { "0": { id: 0, canonical: "" } } });
+      const body = JSON.parse(init.body as string);
+      return Response.json({
+        contributions: [
+          {
+            username: "Alice",
+            project: "frwiki",
+            revision: body.cursor ? 2 : 1,
+            timestamp: "2021-01-03T00:00:00Z",
+            namespace: 0,
+            title: "Article",
+            category: "OTHER",
+            automation: "normal",
+            tags: [],
+            provider: "mediawiki",
+          },
+        ],
+        cursor: body.cursor ? null : "next",
+      });
+    }),
+  );
+  s.queue = [
+    {
+      provider: "mediawiki",
+      usernames: ["Alice"],
+      project: "frwiki",
+      attempts: 0,
+    },
+  ];
+  await new Collector(s, () => {}).run();
+  expect(s.edits).toHaveLength(2);
+  expect(s.edits.every((edit) => edit.category === "CONTENT")).toBe(true);
+  expect(s.cohort[0].post_complete).toBe(true);
+  expect(s.cohort[0].warnings).toEqual([]);
+});
 it("tous les projets collecte aussi des éditions anglaises et Commons avec une sélection personnalisée vide", async () => {
   const s = session();
   s.cohort = s.cohort.slice(0, 1);
