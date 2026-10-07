@@ -254,11 +254,11 @@ test("la collecte interroge les 13 nouveaux comptes retenus puis complète seule
   });
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   await page.setViewportSize({ width: 390, height: 844 });
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth,
-    ),
-  ).toBe(true);
+  await expect
+    .poll(() =>
+      page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+    )
+    .toBe(true);
   await page.screenshot({
     path: "../output/collection-selected-13-mobile.png",
     fullPage: true,
@@ -427,11 +427,11 @@ test("quatre étapes, vérification intégrée à l’import et bilan consultabl
   });
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   await page.setViewportSize({ width: 390, height: 844 });
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth,
-    ),
-  ).toBe(true);
+  await expect
+    .poll(() =>
+      page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+    )
+    .toBe(true);
   await page.screenshot({
     path: "../output/import-verified-mobile.png",
     fullPage: true,
@@ -602,11 +602,11 @@ test("retour entre les étapes conserve l’analyse et nouvelle analyse protège
     }),
   ).toHaveValue("Compte à garder");
   await page.setViewportSize({ width: 320, height: 700 });
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth,
-    ),
-  ).toBe(true);
+  await expect
+    .poll(() =>
+      page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+    )
+    .toBe(true);
   await page.getByLabel("Langue", { exact: true }).selectOption("en");
   await page.getByRole("button", { name: "New analysis", exact: true }).click();
   await expect(
@@ -752,11 +752,11 @@ test("paramétrage simplifié, fenêtre conditionnelle et catégories expliquée
   await page
     .getByLabel("Préréglage de création", { exact: true })
     .selectOption("custom");
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth,
-    ),
-  ).toBe(true);
+  await expect
+    .poll(() =>
+      page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+    )
+    .toBe(true);
   await page.screenshot({
     path: "../output/settings-mobile.png",
     fullPage: true,
@@ -949,11 +949,11 @@ test("733 comptes paginés, exclusions réversibles et détails sans défilement
   });
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   await page.setViewportSize({ width: 390, height: 844 });
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth,
-    ),
-  ).toBe(true);
+  await expect
+    .poll(() =>
+      page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+    )
+    .toBe(true);
   expect(await fits()).toBe(true);
   await page.screenshot({
     path: "../output/participants-mobile.png",
@@ -1043,11 +1043,11 @@ test("anglais et retour français conservent l’analyse, ses totaux et ses appe
   ).toBeChecked();
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   await page.setViewportSize({ width: 390, height: 844 });
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth,
-    ),
-  ).toBe(true);
+  await expect
+    .poll(() =>
+      page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+    )
+    .toBe(true);
   await page.screenshot({
     path: "../output/results-en-mobile.png",
     fullPage: true,
@@ -1791,11 +1791,11 @@ test("liste filtrée par échéance et projet, fiches en ligne et historique pub
   await expect(
     list.getByRole("link", { name: "All contributions on fr.wikipedia.org" }),
   ).toBeVisible();
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth,
-    ),
-  ).toBe(true);
+  await expect
+    .poll(() =>
+      page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+    )
+    .toBe(true);
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   await page.screenshot({
     path: "../output/contributor-list-en-mobile.png",
