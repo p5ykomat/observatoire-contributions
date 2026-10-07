@@ -309,7 +309,7 @@ test("parcours complet, exclusions, graphiques, exports et recalcul sans réseau
   page.on("request", (r) => {
     if (r.url().includes("/api/")) calls.push(r.url());
   });
-  await page.getByLabel("Exclure Alice", { exact: true }).check();
+  await page.getByLabel("Exclure Alice", { exact: true }).click();
   await expect(
     page
       .locator(".kpis > div")
@@ -317,7 +317,13 @@ test("parcours complet, exclusions, graphiques, exports et recalcul sans réseau
       .getByText("2", { exact: true }),
   ).toBeVisible();
   expect(calls).toHaveLength(0);
+  await page
+    .getByRole("combobox", { name: "Afficher", exact: true })
+    .selectOption("all");
   await page.getByLabel("Exclure Alice", { exact: true }).uncheck();
+  await page
+    .getByRole("combobox", { name: "Afficher", exact: true })
+    .selectOption("contributing");
   for (const name of [
     "Exporter le CSV détaillé",
     "Exporter la synthèse CSV",
@@ -1021,6 +1027,9 @@ test("anglais et retour français conservent l’analyse, ses totaux et ses appe
   await expect(
     page.getByRole("status").filter({ hasText: "Verification complete." }),
   ).toBeVisible();
+  await page
+    .getByRole("combobox", { name: "Show", exact: true })
+    .selectOption("all");
   await expect(
     page.getByLabel("Exclude Machine", { exact: true }),
   ).toBeChecked();
@@ -1124,7 +1133,7 @@ test("graphiques expliqués, pourcentages avec dénominateurs et groupes retiré
   ).toBeVisible();
 });
 
-test("échéance future expliquée, bilan par famille simplifié et retour à Aujourd’hui", async ({
+test("échéance future expliquée, liste des contributeurs et retour à Aujourd’hui", async ({
   page,
 }) => {
   await page.clock.setFixedTime(new Date("2021-03-03T12:00:00Z"));
@@ -1157,18 +1166,10 @@ test("échéance future expliquée, bilan par famille simplifié et retour à Au
       { exact: false },
     ),
   ).toBeVisible();
-  const family = page.locator(
-    'section[aria-labelledby="family-balance-title"]',
-  );
-  await expect(family.getByRole("columnheader")).toHaveText([
-    "Famille de projets",
-    "A contribué",
-    "Part observée",
-  ]);
-  await expect(family.getByText("Données insuffisantes")).toHaveCount(0);
+  await expect(page.locator("#family-balance-title")).toHaveCount(0);
   await expect(
-    family.getByText("Aucune contribution dans la période"),
-  ).toHaveCount(0);
+    page.getByRole("heading", { name: "Liste des contributeurs", exact: true }),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Aujourd’hui", exact: true }).click();
   await expect(
     page.getByText("2 personnes sur 2 ont fait au moins une modification", {
@@ -1192,11 +1193,9 @@ test("échéance future expliquée, bilan par famille simplifié et retour à Au
     .toBe(true);
   await page.getByLabel("Langue", { exact: true }).selectOption("en");
   await expect(help).toContainText("This is not an error");
-  await expect(family.getByRole("columnheader")).toHaveText([
-    "Project family",
-    "Contributed",
-    "Observed share",
-  ]);
+  await expect(
+    page.getByRole("heading", { name: "Contributor list", exact: true }),
+  ).toBeVisible();
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   await page.screenshot({
     path: "../output/results-deadline-en-mobile.png",
@@ -1205,7 +1204,6 @@ test("échéance future expliquée, bilan par famille simplifié et retour à Au
   await page
     .locator(".followup-question")
     .screenshot({ path: "../output/deadline-question-en-mobile.png" });
-  await family.screenshot({ path: "../output/family-balance-en-mobile.png" });
 });
 
 test("dates modifiables dans Paramétrer sans modifier le Dashboard ni collecter", async ({
@@ -1678,3 +1676,121 @@ for (const fallback of [false, true]) {
     ).toBeVisible();
   });
 }
+
+test("liste filtrée par échéance et projet, fiches en ligne et historique public", async ({
+  page,
+}) => {
+  await mocks(page);
+  await page.route("**/api/global-contributions", async (route) => {
+    const { username } = route.request().postDataJSON();
+    await route.fulfill({
+      json: {
+        rows: [
+          {
+            username,
+            project:
+              username === "Alice"
+                ? "fr.wikipedia.org"
+                : "commons.wikimedia.org",
+            rev_id: username === "Alice" ? 21 : 22,
+            timestamp:
+              username === "Alice"
+                ? "2021-01-04T12:00:00Z"
+                : "2021-03-10T12:00:00Z",
+            namespace: username === "Alice" ? 0 : 6,
+            page_title: "Exemple",
+          },
+        ],
+        cursor: null,
+      },
+    });
+  });
+  await analyzed(page);
+  const list = page.locator(
+    'section[aria-labelledby="contributor-list-title"]',
+  );
+  const calls: string[] = [];
+  page.on("request", (request) => {
+    if (request.url().includes("/api/")) calls.push(request.url());
+  });
+  await page.getByRole("button", { name: "J+30", exact: true }).click();
+  await expect(
+    list.getByRole("button", { name: "Alice", exact: true }),
+  ).toBeVisible();
+  await expect(
+    list.getByRole("button", { name: "Bob", exact: true }),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "J+90", exact: true }).click();
+  await expect(
+    list.getByRole("button", { name: "Bob", exact: true }),
+  ).toBeVisible();
+  await list.getByRole("button", { name: "Bob", exact: true }).click();
+  await expect(
+    list.getByRole("button", { name: "Bob", exact: true }),
+  ).toHaveAttribute("aria-expanded", "true");
+  const fiche = list.locator(".individual");
+  await expect(
+    fiche.getByRole("link", {
+      name: "Toutes les contributions sur fr.wikipedia.org",
+    }),
+  ).toHaveAttribute(
+    "href",
+    "https://fr.wikipedia.org/wiki/Special:Contributions/Bob",
+  );
+  await expect(
+    fiche.getByRole("link", {
+      name: "Toutes les contributions sur commons.wikimedia.org",
+    }),
+  ).toHaveAttribute(
+    "href",
+    "https://commons.wikimedia.org/wiki/Special:Contributions/Bob",
+  );
+  expect(
+    await fiche.evaluate((element) =>
+      element
+        .closest("tr")
+        ?.previousElementSibling?.textContent?.includes("Bob"),
+    ),
+  ).toBe(true);
+  await fiche.getByRole("button", { name: "Fermer la fiche" }).click();
+  await expect(
+    list.getByRole("button", { name: "Bob", exact: true }),
+  ).toBeFocused();
+  await list.getByLabel("Exclure Bob", { exact: true }).click();
+  await expect(
+    list.getByRole("button", { name: "Bob", exact: true }),
+  ).toHaveCount(0);
+  await list
+    .getByRole("combobox", { name: "Afficher", exact: true })
+    .selectOption("all");
+  await list.getByLabel("Exclure Bob", { exact: true }).uncheck();
+  await list
+    .getByRole("combobox", { name: "Afficher", exact: true })
+    .selectOption("contributing");
+  await page.getByLabel("Commons", { exact: true }).uncheck();
+  await expect(
+    list.getByRole("button", { name: "Bob", exact: true }),
+  ).toHaveCount(0);
+  expect(calls).toEqual([]);
+  await list.getByRole("button", { name: "Alice", exact: true }).click();
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await page.screenshot({
+    path: "../output/contributor-list-fr-desktop.png",
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 320, height: 900 });
+  await page.getByLabel("Langue", { exact: true }).selectOption("en");
+  await expect(
+    list.getByRole("link", { name: "All contributions on fr.wikipedia.org" }),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await page.screenshot({
+    path: "../output/contributor-list-en-mobile.png",
+    fullPage: true,
+  });
+});
