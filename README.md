@@ -1,4 +1,6 @@
-# Rétention Wikimédia
+# Wikimedia Retention / Rétention Wikimédia
+
+Toolforge deployment name: `wikimedia-retention` (subject to account availability). See the [deployment and verification guide](docs/TOOLFORGE.md).
 
 **[Tester l’application en ligne](https://retention-wikimedia.vercel.app/)**, sans installation ni compte.
 

@@ -80,7 +80,7 @@ class Transport:
 
 def make_client() -> httpx.AsyncClient:
     agent = os.getenv(
-        "RETENTION_USER_AGENT", "WikimediaRetention/1.0 (public research application)"
+        "RETENTION_USER_AGENT", "WikimediaRetention/1.0 (https://github.com/p5ykomat/observatoire-contributions)"
     )
     return httpx.AsyncClient(
         headers={"User-Agent": agent, "Accept": "application/json"},

@@ -200,6 +200,7 @@ test("la collecte interroge les 13 nouveaux comptes retenus puis complète seule
     .click();
   for (const index of [15, 16, 17])
     await page.getByLabel(`Exclure Compte${index}`, { exact: true }).check();
+  await page.getByRole("button", { name: "Appliquer les exclusions sélectionnées", exact: true }).click();
   await page
     .getByRole("button", {
       name: "Vérifier les comptes et continuer",
