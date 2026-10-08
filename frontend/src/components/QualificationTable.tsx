@@ -10,12 +10,14 @@ export function QualificationTable({
   toggle,
   reason,
   disabled = false,
+  pendingExclusions = {},
 }: {
   accounts: Account[];
   start: string;
   toggle: (name: string) => void;
   reason: (name: string, value: string) => void;
   disabled?: boolean;
+  pendingExclusions?: Record<string, boolean>;
 }) {
   const { t } = useTranslation();
   const [search, setSearch] = useState(""),
@@ -114,7 +116,7 @@ export function QualificationTable({
                   <input
                     type="checkbox"
                     disabled={disabled}
-                    checked={!a.included}
+                    checked={pendingExclusions[a.username] ?? !a.included}
                     aria-label={t("excludeAccount", { name: a.username })}
                     onChange={() => toggle(a.username)}
                   />

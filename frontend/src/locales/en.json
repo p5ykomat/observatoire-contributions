@@ -2,7 +2,12 @@
   "app": "Wikimedia Retention",
   "tagline": "Understand contribution paths after an event",
   "introText": "Follow a cohort over time, on its original projects and across the Wikimedia ecosystem.",
-  "steps": ["Import", "Settings", "Collect", "Results"],
+  "steps": [
+    "Import",
+    "Settings",
+    "Collect",
+    "Results"
+  ],
   "skip": "Skip to content",
   "privacy": "Public data. No account required. No cohorts stored on the server.",
   "clear": "Clear this analysis",
@@ -35,7 +40,7 @@
   "invalid": "Invalid username",
   "unqualified": "Verification unavailable",
   "exclusions": "Accounts to exclude, one per line",
-  "applyExclusions": "Apply exclusions",
+  "applyExclusions": "Apply selected exclusions",
   "creation": "When is an account considered new?",
   "preset": "Account creation preset",
   "presets": [
@@ -245,7 +250,7 @@
   "collapseDetails": "Collapse details",
   "excludeQuestion": "Exclude?",
   "excludeAccount": "Exclude {{name}}",
-  "excludeHelp": "Check “Yes” to exclude an account from the analysis. Organizer and facilitator accounts and detected bots are excluded automatically; you can change these exclusions.",
+  "excludeHelp": "Check “Yes” to select an exclusion, then confirm with “Apply selected exclusions”. Automatic exclusions for organizers and bots can be changed.",
   "yes": "Yes",
   "accountDetails": "Account details",
   "qualificationStatus": "Account verification",
@@ -413,5 +418,8 @@
   "selectionNeedsStart": "Enter the event start to calculate the window.",
   "selectionNeedsVerification": "The account creation date or existence could not yet be verified.",
   "selectionCreatedBefore": "Account created before the selected window.",
-  "selectionCreatedAfter": "Account created after the selected window."
+  "selectionCreatedAfter": "Account created after the selected window.",
+  "exclusionsPending": "Selection not applied. Confirm exclusions before continuing.",
+  "exclusionsHelp": "Select accounts to exclude, then apply the selection before continuing.",
+  "personalProject": "Personal project"
 }

@@ -91,6 +91,8 @@ export default function App() {
         diagnostics: data.diagnostics,
         stage: 1,
       }));
+      setPendingExclusions({});
+      setExclusions("");
       setNames("");
       setCSV([]);
       setError("");
@@ -176,6 +178,18 @@ export default function App() {
     await engine.prepare(recollect);
     await engine.run();
   }
+  const [pendingExclusions, setPendingExclusions] = useState<Record<string, boolean>>({});
+  const typedExclusions = new Set(exclusions.split(/\r?\n/).map(normalize).filter(Boolean));
+  const hasPendingExclusions = s.cohort.some(a =>
+    (typedExclusions.has(a.username) ? true : pendingExclusions[a.username] ?? !a.included) !== !a.included);
+  function applyExclusions() {
+    update({ cohort: s.cohort.map(a => {
+      const excluded = typedExclusions.has(a.username) || (pendingExclusions[a.username] ?? !a.included);
+      return { ...a, included: !excluded, exclusion_reason: excluded ? a.exclusion_reason || t("excluded") : "" };
+    }) });
+    setPendingExclusions({});
+    setExclusions("");
+  }
   function toggle(name: string) {
     setS((previous) => ({
       ...previous,
@@ -191,6 +205,8 @@ export default function App() {
     }));
   }
   async function dashboard() {
+    setPendingExclusions({});
+    setExclusions("");
     const current = generation.current;
     const controller = new AbortController();
     importRequest.current = controller;
@@ -259,6 +275,7 @@ export default function App() {
     importRequest.current?.abort();
     collector.current?.stop();
     collector.current = null;
+    setPendingExclusions({});
     setS(emptySession());
     setNames("");
     setUrl("");
@@ -555,6 +572,8 @@ export default function App() {
                       customScopeInitialized.current =
                         imported.params.scope === "custom";
                       setDateChoice("");
+                      setPendingExclusions({});
+                      setExclusions("");
                       setS(imported);
                       setNotice(t("saved"));
                     })
@@ -628,34 +647,15 @@ export default function App() {
           <>
             <h1>{t("importedParticipants")}</h1>
             <p>{t("qualificationNote")}</p>
+            <p className="hint" role="status">{t(hasPendingExclusions ? "exclusionsPending" : "exclusionsHelp")}</p>
             <div className="actions">
-              <button
-                className="primary"
-                disabled={busy}
-                onClick={() => void perform(qualify)}
-              >
-                {busy ? t("qualifying") : t("qualify")}
-              </button>
-              <button
-                disabled={busy}
-                onClick={() => {
-                  const excluded = new Set(
-                    exclusions.split(/\r?\n/).map(normalize),
-                  );
-                  update({
-                    cohort: s.cohort.map((a) =>
-                      excluded.has(a.username)
-                        ? {
-                            ...a,
-                            included: false,
-                            exclusion_reason: t("excluded"),
-                          }
-                        : a,
-                    ),
-                  });
-                }}
-              >
+              <button disabled={busy || !hasPendingExclusions} onClick={applyExclusions}>
                 {t("applyExclusions")}
+              </button>
+              <span aria-hidden="true">→</span>
+              <button className="primary" disabled={busy || hasPendingExclusions}
+                onClick={() => void perform(qualify)}>
+                {busy ? t("qualifying") : t("qualify")}
               </button>
               <button disabled={busy} onClick={() => update({ stage: 0 })}>
                 {t("changeImport")}
@@ -700,7 +700,10 @@ export default function App() {
               disabled={busy}
               accounts={s.cohort}
               start={s.params.start}
-              toggle={toggle}
+              pendingExclusions={pendingExclusions}
+              toggle={(name) => setPendingExclusions(previous => ({
+                ...previous, [name]: !(previous[name] ?? !s.cohort.find(a => a.username === name)!.included)
+              }))}
               reason={(name, value) =>
                 update({
                   cohort: s.cohort.map((a) =>
@@ -923,6 +926,7 @@ export default function App() {
         )}
       </main>
       <footer>
+        <p><a href="https://meta.wikimedia.org/wiki/User:Mathieu_Denel_WMFr">Mathieu Denel WMFR</a> · {t("personalProject")}</p>
         <p>{t("privacy")} · GPL-3.0-or-later</p>
         <details>
           <summary>{t("about")}</summary>

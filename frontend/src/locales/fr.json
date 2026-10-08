@@ -2,7 +2,12 @@
   "app": "Rétention Wikimédia",
   "tagline": "Comprendre les parcours après une action",
   "introText": "Suivez une cohorte dans le temps, sur ses projets d’origine et dans tout l’écosystème Wikimédia.",
-  "steps": ["Importer", "Paramétrer", "Collecter", "Résultats"],
+  "steps": [
+    "Importer",
+    "Paramétrer",
+    "Collecter",
+    "Résultats"
+  ],
   "skip": "Aller au contenu",
   "privacy": "Données publiques. Sans compte. Sans conservation de cohorte sur le serveur.",
   "clear": "Effacer les données de cette analyse",
@@ -35,7 +40,7 @@
   "invalid": "Nom invalide",
   "unqualified": "Vérification indisponible",
   "exclusions": "Comptes à exclure, un par ligne",
-  "applyExclusions": "Appliquer les exclusions",
+  "applyExclusions": "Appliquer les exclusions sélectionnées",
   "creation": "Quand le compte est-il considéré comme nouveau ?",
   "preset": "Préréglage de création",
   "presets": [
@@ -245,7 +250,7 @@
   "collapseDetails": "Replier les détails",
   "excludeQuestion": "À exclure ?",
   "excludeAccount": "Exclure {{name}}",
-  "excludeHelp": "Cochez « Oui » pour exclure un compte de l’analyse. Les comptes d’organisation ou d’accompagnement et les bots détectés sont exclus automatiquement ; vous pouvez modifier ces exclusions.",
+  "excludeHelp": "Cochez « Oui » pour préparer une exclusion, puis confirmez avec « Appliquer les exclusions sélectionnées ». Les exclusions automatiques des organisateurs et des bots restent modifiables.",
   "yes": "Oui",
   "accountDetails": "Détails du compte",
   "qualificationStatus": "Vérification du compte",
@@ -413,5 +418,8 @@
   "selectionNeedsStart": "Renseignez le début de l’événement pour calculer la fenêtre.",
   "selectionNeedsVerification": "La date de création ou l’existence du compte n’a pas encore pu être vérifiée.",
   "selectionCreatedBefore": "Compte créé avant la fenêtre choisie.",
-  "selectionCreatedAfter": "Compte créé après la fenêtre choisie."
+  "selectionCreatedAfter": "Compte créé après la fenêtre choisie.",
+  "exclusionsPending": "Sélection non appliquée. Confirmez les exclusions avant de continuer.",
+  "exclusionsHelp": "Cochez les comptes à exclure, puis appliquez la sélection avant de continuer.",
+  "personalProject": "Projet personnel"
 }

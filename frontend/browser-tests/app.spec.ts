@@ -902,7 +902,7 @@ test("733 comptes paginés, exclusions réversibles et détails sans défilement
     exact: true,
   });
   const excludeButton = page.getByRole("button", {
-    name: "Appliquer les exclusions",
+    name: "Appliquer les exclusions sélectionnées",
     exact: true,
   });
   const tableBox = await page.locator(".cohort-panel").boundingBox();
@@ -922,6 +922,14 @@ test("733 comptes paginés, exclusions réversibles et détails sans défilement
     }),
   ).toBeVisible();
   await page.getByLabel("Exclure Compte001", { exact: true }).uncheck();
+  await expect(continueButton).toBeDisabled();
+  await expect(page.getByText("733 comptes importés : 731 non exclus et 2 exclus.", {exact:true})).toBeVisible();
+  await excludeButton.click();
+  await expect(continueButton).toBeEnabled();
+  await expect(page.getByText("733 comptes importés : 732 non exclus et 1 exclus.", {exact:true})).toBeVisible();
+  await expect(page.locator("footer")).toContainText("Mathieu Denel WMFR");
+  expect(await excludeButton.evaluate((button) => Boolean(button.compareDocumentPosition(document.querySelector("button.primary:disabled") || button.nextElementSibling?.nextElementSibling!) & Node.DOCUMENT_POSITION_FOLLOWING))).toBeTruthy();
+
   await page
     .getByRole("button", { name: "Page suivante", exact: true })
     .click();
