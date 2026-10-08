@@ -408,10 +408,7 @@ export default function App() {
           <span className="brand-mark" aria-hidden="true">
             ◉
           </span>
-          <span>
-            {t("app")}
-            <small>{t("tagline")}</small>
-          </span>
+          <span>{t("app")}</span>
         </a>
         <div className="header-actions">
           <label className="language-picker">
@@ -498,9 +495,7 @@ export default function App() {
         {s.stage === 0 && (
           <>
             <section className="hero">
-              <p className="eyebrow">{t("app")}</p>
               <h1>{t("introText")}</h1>
-              <p className="privacy">{t("privacy")}</p>
             </section>
             <div className="import-grid">
               <section className="panel">
