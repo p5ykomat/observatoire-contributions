@@ -928,27 +928,6 @@ export default function App() {
       <footer>
         <p><a href="https://meta.wikimedia.org/wiki/User:Mathieu_Denel_WMFr">Mathieu Denel WMFR</a> · {t("personalProject")}</p>
         <p>{t("privacy")} · GPL-3.0-or-later</p>
-        <details>
-          <summary>{t("about")}</summary>
-          <p>{t("aboutText")}</p>
-          <p>
-            <a
-              href="https://mdenel.vercel.app"
-              target="_blank"
-              rel="noreferrer"
-            >
-              {t("authorSite")}
-            </a>{" "}
-            ·{" "}
-            <a
-              href="https://github.com/p5ykomat/observatoire-contributions"
-              target="_blank"
-              rel="noreferrer"
-            >
-              {t("sourceCode")}
-            </a>
-          </p>
-        </details>
       </footer>
       <dialog
         ref={resetDialog}
