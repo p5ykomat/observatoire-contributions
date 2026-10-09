@@ -67,6 +67,9 @@ export function exportCSV(s: Session, summary = false) {
     analysis_end: r.end,
     data_until: s.params.reference,
     question: r.question,
+    include_deleted_creations: r.question.include_deleted_creations,
+    include_deleted_modifications: r.question.include_deleted_modifications,
+    archived_contributions_collected: r.deleted.collected,
     ...(s.new_accounts
       ? {
           registration_cohort: s.new_accounts,
@@ -270,6 +273,25 @@ export function makePDF(s: Session, nominative = false) {
     }),
   );
   paragraph(t("fup.otherCategories"));
+  if (r.projects.some((project) => project.family === "wikipedia")) {
+    paragraph(
+      t("deleted.includeCreations") +
+        ": " +
+        t(r.question.include_deleted_creations ? "yes" : "no"),
+    );
+    paragraph(
+      t("deleted.includeModifications") +
+        ": " +
+        t(r.question.include_deleted_modifications ? "yes" : "no"),
+    );
+    if (!r.deleted.collected) paragraph(t("deleted.oldArchive"));
+    else if (r.deleted.incomplete.length)
+      paragraph(
+        t("deleted.incomplete", { count: r.deleted.incomplete.length }),
+      );
+    if (r.deleted.unknown)
+      paragraph(t("deleted.unknown", { count: r.deleted.unknown }));
+  }
   paragraph(
     t("pdfSettings", {
       selection: t("selections." + s.params.selection),

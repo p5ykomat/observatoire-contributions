@@ -38,11 +38,19 @@ Le chargement suit toutes les pages du journal, puis vérifie les comptes par lo
 
 ## Comprendre les résultats
 
+La liste des contributeurs précède les thématiques. Elle se trie par nombre de contributions ou par date de dernière contribution, dans les deux sens.
+
+La collecte recherche automatiquement les métadonnées publiques des créations et modifications d’articles Wikipédia ensuite supprimés. Deux cases, cochées par défaut dans les résultats, permettent de les inclure ou de les exclure séparément. Les nombres, pourcentages, listes et graphiques se recalculent sans nouvelle requête. Les modifications annulées sur un article conservé restent comptées, indépendamment de ces deux cases.
+
+La période concerne la date de la contribution. Le statut supprimé correspond aux révisions archivées au moment de la collecte. Les métadonnées masquées restent inaccessibles. Si une source ne répond pas ou ne permet pas de distinguer créations et modifications, l’interface le signale au lieu d’affirmer une absence d’activité. Les anciennes analyses JSON restent lisibles ; une collecte complémentaire est nécessaire pour récupérer leurs contributions supprimées. Le JSON conserve les données archivées, les filtres et les curseurs de reprise.
+
 Depuis les résultats, **Analyser les thématiques des articles** lance une analyse facultative de l’espace principal de Wikipédia. Le modèle multilingue de Wikimédia [`outlink-topic-model`](https://meta.wikimedia.org/wiki/Machine_learning_models/Production/Language_agnostic_link-based_article_topic), servi par Lift Wing, classe les articles grâce à leurs liens. Les scores de confiance d’au moins 0,5 sont retenus. Les thèmes concernent l’article dans son état actuel, pas le texte ajouté ni la version historique de la page. Les redirections, homonymies et pages inaccessibles aujourd’hui sont écartées.
 
-Choisissez créations, modifications ou les deux, puis contributeurs, articles distincts ou contributions. Chaque valeur est accompagnée de son pourcentage et du total utilisé. Un contributeur ou article peut relever de plusieurs thèmes ; les pourcentages peuvent dépasser 100 % au total. Les scores du modèle ne sont jamais utilisés comme pourcentages de contributions. Les thèmes sont regroupés en huit grandes familles (plus les éventuels thèmes inconnus), avec les sous-thèmes disponibles à la demande.
+Choisissez créations (sélection par défaut), modifications ou les deux, puis contributeurs, articles distincts ou contributions. Chaque valeur est accompagnée de son pourcentage et du total utilisé. Un contributeur ou article peut relever de plusieurs thèmes ; les pourcentages peuvent dépasser 100 % au total. Les scores du modèle ne sont jamais utilisés comme pourcentages de contributions. Les thèmes sont regroupés en huit grandes familles (plus les éventuels thèmes inconnus), avec les sous-thèmes disponibles à la demande.
 
 La couverture distingue les articles classés, sans thème reconnu, indisponibles et encore à examiner. Le classement est en bêta et peut comporter des erreurs. Il reprend les filtres des résultats, reste indépendant de la collecte principale et interroge chaque article distinct à la demande. Pause et reprise conservent les résultats dans la page ; le JSON conserve les thèmes après une pause ou à la fin. Le CSV thématique conserve la mesure, le filtre, le dénominateur, la période et le modèle utilisés. Une courte explication et un lien vers la fiche officielle sont accessibles dans l’interface.
+
+Les articles supprimés inclus restent dans les dénominateurs, sans thématique attribuée. Le modèle ne reçoit ni leur contenu supprimé ni une page recréée sous le même titre. Décocher leur inclusion recalcule aussi les pourcentages thématiques. Par défaut, le modèle est appelé pour les créations d’articles accessibles. Leurs métadonnées publiques sont récupérées via `alldeletedrevisions` et les créations sont identifiées avec XTools Pages Created.
 
 La question principale est : **combien de participants ont fait au moins une modification après l’événement ?**
 

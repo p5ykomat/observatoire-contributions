@@ -86,7 +86,7 @@ async function restore(page: Page, s = fixture()) {
   });
   await expect(
     page.getByRole("heading", {
-      name: "Thématiques des articles Wikipédia, bêta",
+      name: "Thématiques des articles créés sur Wikipédia, bêta",
     }),
   ).toBeVisible();
 }
@@ -128,6 +128,9 @@ test("article topics explain the model, distinguish measures, reuse predictions 
   });
   await restore(page);
   const section = page.locator(".wikipedia-topics");
+  await section
+    .getByLabel("Créations ou modifications", { exact: true })
+    .selectOption("both");
   await section.getByText("Comprendre le modèle", { exact: true }).click();
   await expect(section.getByText(/Il utilise fastText/)).toBeVisible();
   await expect(
@@ -219,13 +222,18 @@ test("article topics explain the model, distinguish measures, reuse predictions 
   await section.screenshot({ path: "../output/topics-panel-desktop.png" });
   await page.getByLabel("Langue", { exact: true }).selectOption("en");
   await expect(
-    section.getByRole("heading", { name: "Wikipedia article topics, beta" }),
+    section.getByRole("heading", {
+      name: "Topics of articles created on Wikipedia, beta",
+    }),
   ).toBeVisible();
   await expect(section.locator(".topic-bars")).toContainText(
     "Science and technology",
   );
   await page.getByLabel("Language", { exact: true }).selectOption("fr");
   await restore(page, saved);
+  await section
+    .getByLabel("Créations ou modifications", { exact: true })
+    .selectOption("both");
   await page
     .locator(".wikipedia-topics")
     .getByRole("button", { name: "Analyser les thématiques des articles" })
@@ -268,6 +276,9 @@ test("model failures are separate from unclassified articles and retries preserv
   await restore(page);
   const section = page.locator(".wikipedia-topics");
   await section
+    .getByLabel("Créations ou modifications", { exact: true })
+    .selectOption("both");
+  await section
     .getByRole("button", { name: "Analyser les thématiques des articles" })
     .click();
   await expect(
@@ -306,6 +317,9 @@ test("pause preserves completed articles and resume skips their API calls", asyn
   await restore(page);
   const section = page.locator(".wikipedia-topics");
   await section
+    .getByLabel("Créations ou modifications", { exact: true })
+    .selectOption("both");
+  await section
     .getByRole("button", { name: "Analyser les thématiques des articles" })
     .click();
   await expect(section.getByText("Articles examinés : 1 sur 2.")).toBeVisible();
@@ -322,4 +336,170 @@ test("pause preserves completed articles and resume skips their API calls", asyn
     .click();
   await expect(section.getByText("Articles examinés : 2 sur 2.")).toBeVisible();
   expect(calls).toEqual([42, 43, 43]);
+});
+
+test("contributor sorting and deleted-article filters update results and themes without collection", async ({
+  page,
+}) => {
+  const s = fixture();
+  s.deleted_collection_version = 1;
+  s.cohort.forEach((a) => {
+    a.deleted_complete = a.deleted_classified = true;
+  });
+  s.edits[2].timestamp = "2026-02-06T12:00:00Z";
+  s.edits.push(
+    {
+      ...s.edits[0],
+      username: "NoContribution",
+      revision: 4,
+      title: "Deleted article",
+      page_id: null,
+      deleted_page: true,
+    },
+    {
+      ...s.edits[2],
+      revision: 5,
+      title: "Deleted article",
+      page_id: null,
+      deleted_page: true,
+    },
+  );
+  const calls: number[] = [];
+  await model(page, async (id) => {
+    calls.push(id);
+  });
+  await restore(page, s);
+  const list = page.locator(
+    'section[aria-labelledby="contributor-list-title"]',
+  );
+  const section = page.locator(".wikipedia-topics");
+  expect(
+    await list.evaluate(
+      (el) =>
+        el.compareDocumentPosition(
+          document.querySelector(".wikipedia-topics")!,
+        ) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ),
+  ).toBeTruthy();
+  const names = () => list.locator("tbody button.link").allTextContents();
+  expect(await names()).toEqual([
+    "TestAccountA",
+    "TestAccountB",
+    "NoContribution",
+  ]);
+  await list
+    .getByLabel("Trier les contributeurs")
+    .selectOption("contributions_asc");
+  expect(await names()).toEqual([
+    "NoContribution",
+    "TestAccountA",
+    "TestAccountB",
+  ]);
+  await list.getByLabel("Trier les contributeurs").selectOption("last_desc");
+  expect((await names())[0]).toBe("TestAccountB");
+  await list.getByLabel("Trier les contributeurs").selectOption("last_asc");
+  expect((await names()).at(-1)).toBe("TestAccountB");
+  await expect(
+    section.getByLabel("Créations ou modifications", { exact: true }),
+  ).toHaveValue("creation");
+  await section
+    .getByRole("button", { name: "Analyser les thématiques des articles" })
+    .click();
+  await expect(section.getByText("Articles examinés : 1 sur 1.")).toBeVisible();
+  await expect(
+    section.getByText(/article.*supprimé.*sans thématique/),
+  ).toBeVisible();
+  await expect(
+    section
+      .locator(".topic-bars li")
+      .filter({ hasText: "Sciences et technologies" }),
+  ).toContainText("1 (50 %)");
+  const creation = page.getByLabel(
+    "Inclure les créations d’articles ensuite supprimés",
+    { exact: true },
+  );
+  const modifications = page.getByLabel(
+    "Inclure les modifications sur des articles ensuite supprimés",
+    { exact: true },
+  );
+  await expect(creation).toBeChecked();
+  await expect(modifications).toBeChecked();
+  await creation.uncheck();
+  expect(await names()).not.toContain("NoContribution");
+  await expect(
+    section
+      .locator(".topic-bars li")
+      .filter({ hasText: "Sciences et technologies" }),
+  ).toContainText("1 (100 %)");
+  await modifications.uncheck();
+  await expect(
+    list
+      .locator("tbody tr")
+      .filter({ hasText: "TestAccountB" })
+      .locator('td[data-label="Contributions"]'),
+  ).toHaveText("1");
+  await creation.check();
+  await modifications.check();
+  expect(await names()).toContain("NoContribution");
+  expect(calls).toEqual([42]);
+  await mkdir("../output", { recursive: true });
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.screenshot({
+    path: "../output/deleted-results-desktop.png",
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await expect
+    .poll(() =>
+      page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+    )
+    .toBe(true);
+  await page.screenshot({
+    path: "../output/deleted-results-mobile.png",
+    fullPage: true,
+  });
+  await page
+    .locator(".deleted-controls")
+    .screenshot({ path: "../output/deleted-controls-mobile.png" });
+  await list.screenshot({ path: "../output/deleted-list-mobile.png" });
+  await page.setViewportSize({ width: 320, height: 844 });
+  await expect
+    .poll(() =>
+      page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+    )
+    .toBe(true);
+});
+
+test("creation-only analysis uses the first observed revision to resolve old XTools data", async ({
+  page,
+}) => {
+  const s = fixture();
+  s.edits[0].new_page = s.edits[1].new_page = null;
+  const revisions: number[] = [];
+  await page.route("**/api/article-topics", async (route) => {
+    const body = route.request().postDataJSON();
+    revisions.push(body.creation_revision);
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        project: "frwiki",
+        title: body.title,
+        page_id: 42,
+        first_revision: 1,
+        model: "outlink-topic-model",
+        threshold: 0.5,
+        fetched_at: "2026-10-09T12:00:00Z",
+        status: "classified",
+        topics: [{ topic: "STEM.Physics", score: 0.7 }],
+      }),
+    });
+  });
+  await restore(page, s);
+  await page
+    .locator(".wikipedia-topics")
+    .getByRole("button", { name: "Analyser les thématiques des articles" })
+    .click();
+  await expect(page.getByText("Articles examinés : 1 sur 1.")).toBeVisible();
+  expect(revisions).toEqual([1]);
 });

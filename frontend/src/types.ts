@@ -44,6 +44,8 @@ export interface Account {
   qualified: boolean;
   pre_complete: boolean;
   post_complete: boolean;
+  deleted_complete?: boolean;
+  deleted_classified?: boolean;
   signup?: { timestamp: string; local_id: number; original_name: string };
 }
 export interface Edit {
@@ -55,6 +57,7 @@ export interface Edit {
   title: string;
   page_id?: number | null;
   new_page?: boolean | null;
+  deleted_page?: boolean;
   category: Category;
   automation: "normal" | "bot" | "detected" | "unknown";
   tags: string[];
@@ -70,6 +73,7 @@ export interface ArticleTopics {
   fetched_at: string;
   status: "classified" | "unclassified" | "excluded" | "unavailable";
   topics: { topic: string; score: number }[];
+  model_skipped?: boolean;
 }
 export interface Params {
   title: string;
@@ -91,13 +95,14 @@ export interface Params {
   observation?: { mode: "registration" | "period"; start: string; end: string };
 }
 export interface Task {
-  provider: "mediawiki" | "xtools";
+  provider: "mediawiki" | "xtools" | "deleted" | "deleted_creations";
   usernames: string[];
   project?: string;
   cursor?: string;
   fallback?: boolean;
   attempts: number;
   end?: string;
+  creation_ids?: number[];
 }
 export interface Taxonomy {
   version: string;
@@ -127,6 +132,7 @@ export interface Session {
   collection_signature: string | null;
   question?: FollowupQuestion;
   article_topics?: Record<string, ArticleTopics>;
+  deleted_collection_version?: 1;
   new_accounts?: {
     start: string;
     end: string;
@@ -140,6 +146,8 @@ export interface FollowupQuestion {
   wikipedia_languages: string[];
   wikipedia_categories: Category[];
   projects?: string[];
+  include_deleted_creations?: boolean;
+  include_deleted_modifications?: boolean;
 }
 export function defaultQuestion(): FollowupQuestion {
   return {
@@ -147,6 +155,8 @@ export function defaultQuestion(): FollowupQuestion {
     families: ["*"],
     wikipedia_languages: ["fr", "en"],
     wikipedia_categories: ["CONTENT"],
+    include_deleted_creations: true,
+    include_deleted_modifications: true,
   };
 }
 export const today = () => new Date().toISOString().slice(0, 10);

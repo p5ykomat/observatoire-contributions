@@ -4,6 +4,25 @@ import { emptySession } from "./types";
 import { importNames } from "./imports";
 import { signature } from "./analysis/cohorts";
 import { aggregate } from "./analysis/aggregation";
+
+function stubFetch(
+  key: string,
+  implementation: (url: string, init: RequestInit) => Promise<Response>,
+) {
+  vi.stubGlobal(
+    key,
+    vi.fn((url: string, init: RequestInit) => {
+      if (url.includes("/api/deleted-contributions"))
+        return Promise.resolve(
+          Response.json({ contributions: [], cursor: null, unavailable: 0 }),
+        );
+      if (url.includes("/api/deleted-creations"))
+        return Promise.resolve(Response.json({ revisions: [], cursor: null }));
+      return implementation(url, init);
+    }),
+  );
+}
+
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
@@ -35,7 +54,7 @@ it.each(["all", "origin", "custom"] as const)(
         index < 13 ? "2026-04-03T12:00:00Z" : "2025-12-24T00:00:00Z",
     }));
     const queried: string[] = [];
-    vi.stubGlobal(
+    stubFetch(
       "fetch",
       vi.fn(async (url: string, init: RequestInit) => {
         const body = JSON.parse(init.body as string);
@@ -81,10 +100,12 @@ it("une ancienne file est filtrée sans partager son curseur avec un compte ajou
     expect(JSON.parse(init.body as string)).toEqual({ usernames: ["Carol"] });
     return Response.json({ merged: [{ wiki: "frwiki", editcount: 1 }] });
   });
-  vi.stubGlobal("fetch", fetch);
+  stubFetch("fetch", fetch);
   await new Collector(s, () => {}).prepare();
   expect(
-    s.queue.map((task) => ({ names: task.usernames, cursor: task.cursor })),
+    s.queue
+      .filter((task) => task.provider === "mediawiki")
+      .map((task) => ({ names: task.usernames, cursor: task.cursor })),
   ).toEqual([
     { names: ["Alice"], cursor: "next" },
     { names: ["Carol"], cursor: undefined },
@@ -99,9 +120,11 @@ it("réintégrer un compte collecte ses données sans réinterroger les comptes 
   const s = session();
   s.cohort[1].included = false;
   const queried: string[] = [];
-  vi.stubGlobal(
+  stubFetch(
     "fetch",
     vi.fn(async (_url: string, init: RequestInit) => {
+      if (_url.includes("local-accounts"))
+        return Response.json({ merged: [{ wiki: "frwiki", editcount: 1 }] });
       queried.push(JSON.parse(init.body as string).username);
       return Response.json({ rows: [], cursor: null });
     }),
@@ -127,11 +150,21 @@ it("un changement de dates invalide aussi la couverture des comptes momentanéme
   });
   s.cohort[1].included = false;
   s.params.end = "2021-01-03";
+  stubFetch(
+    "fetch",
+    vi.fn(async () =>
+      Response.json({ merged: [{ wiki: "frwiki", editcount: 1 }] }),
+    ),
+  );
   await new Collector(s, () => {}).prepare();
   expect(s.cohort[1].post_complete).toBe(false);
   s.cohort[1].included = true;
   await new Collector(s, () => {}).prepare();
-  expect(s.queue.flatMap((task) => task.usernames)).toEqual(["Alice", "Bob"]);
+  expect(
+    s.queue
+      .filter((task) => task.provider !== "deleted")
+      .flatMap((task) => task.usernames),
+  ).toEqual(["Alice", "Bob"]);
 });
 function session() {
   const s = emptySession();
@@ -146,6 +179,8 @@ function session() {
     qualified: true,
     exists: true,
     registration: "2020-12-31T00:00:00Z",
+    deleted_complete: true,
+    deleted_classified: true,
   }));
   s.catalog = [
     {
@@ -165,6 +200,7 @@ function session() {
   };
   s.namespaces = { frwiki: { "0": { id: 0, canonical: "" } } };
   s.collection_signature = signature(s.params);
+  s.deleted_collection_version = 1;
   return s;
 }
 it("pagination, déduplication et secours réel, un échec ne bloque pas le suivant", async () => {
@@ -173,7 +209,7 @@ it("pagination, déduplication et secours réel, un échec ne bloque pas le suiv
     { provider: "xtools", usernames: ["Alice"], attempts: 0 },
     { provider: "xtools", usernames: ["Bob"], attempts: 0 },
   ];
-  vi.stubGlobal(
+  stubFetch(
     "fetch",
     vi.fn(async (url: string, init: RequestInit) => {
       const body = JSON.parse(init.body as string);
@@ -219,7 +255,7 @@ it("une pagination interrompue conserve ses données partielles", async () => {
     },
   ];
   let n = 0;
-  vi.stubGlobal(
+  stubFetch(
     "fetch",
     vi.fn(async () =>
       ++n === 1
@@ -261,9 +297,11 @@ it("un échec de métadonnées Wikidata conserve toute la page XTools et se rép
   s.taxonomy!.projects.wikidatawiki = { "": "STRUCTURED_DATA" };
   let metadataUnavailable = true;
   const called: string[] = [];
-  vi.stubGlobal(
+  stubFetch(
     "fetch",
     vi.fn(async (url: string) => {
+      if (url.includes("local-accounts"))
+        return Response.json({ merged: [{ wiki: "frwiki", editcount: 1 }] });
       called.push(url);
       if (url.includes("namespaces/wikidatawiki"))
         return metadataUnavailable
@@ -308,7 +346,7 @@ it("un échec de métadonnées Wikidata conserve toute la page XTools et se rép
   await collector.prepare();
   await collector.run();
   expect(s.edits).toHaveLength(3);
-  expect(s.cohort[0].providers).toEqual(["xtools"]);
+  expect(s.cohort[0].providers).toEqual(["xtools", "deleted"]);
   expect(s.cohort[0].post_complete).toBe(false);
   expect(s.cohort[0].warnings[0]).toContain("www.wikidata.org");
   expect(called.some((url) => url.includes("local-accounts"))).toBe(false);
@@ -327,21 +365,24 @@ it("les comptes MediaWiki sont regroupés par projet", async () => {
   const s = session();
   s.params.scope = "custom";
   s.params.projects = ["frwiki"];
-  vi.stubGlobal(
+  stubFetch(
     "fetch",
     vi.fn(async () =>
       Response.json({ merged: [{ wiki: "frwiki", editcount: 1 }] }),
     ),
   );
   await new Collector(s, () => {}).prepare(true);
-  expect(s.queue).toHaveLength(1);
+  expect(s.queue.filter((task) => task.provider === "mediawiki")).toHaveLength(
+    1,
+  );
+  expect(s.queue.filter((task) => task.provider === "deleted")).toHaveLength(2);
   expect(s.queue[0].usernames).toEqual(["Alice", "Bob"]);
 });
 it("les métadonnées obtenues pour le compte suivant complètent aussi le précédent", async () => {
   const s = session();
   delete s.namespaces.frwiki;
   let metadataRequests = 0;
-  vi.stubGlobal(
+  stubFetch(
     "fetch",
     vi.fn(async (url: string, init: RequestInit) => {
       if (url.includes("namespaces/frwiki"))
@@ -391,7 +432,7 @@ it.each([false, true])(
     s.taxonomy!.projects.wikidatawiki = { "": "STRUCTURED_DATA" };
     let metadataUnavailable = true;
     const cursors: (string | undefined)[] = [];
-    vi.stubGlobal(
+    stubFetch(
       "fetch",
       vi.fn(async (url: string, init: RequestInit) => {
         if (url.includes("namespaces/wikidatawiki"))
@@ -456,7 +497,7 @@ it("un classement rétabli sur la page suivante répare aussi les contributions 
   const s = session();
   delete s.namespaces.frwiki;
   let metadataRequests = 0;
-  vi.stubGlobal(
+  stubFetch(
     "fetch",
     vi.fn(async (url: string, init: RequestInit) => {
       if (url.includes("namespaces/frwiki"))
@@ -518,9 +559,16 @@ it("tous les projets collecte aussi des éditions anglaises et Commons avec une 
   );
   s.namespaces.enwiki = { "0": { id: 0, canonical: "" } };
   s.namespaces.commonswiki = { "6": { id: 6, canonical: "File" } };
-  vi.stubGlobal(
+  stubFetch(
     "fetch",
     vi.fn(async (url: string) => {
+      if (url.includes("local-accounts"))
+        return Response.json({
+          merged: [
+            { wiki: "enwiki", editcount: 1 },
+            { wiki: "commonswiki", editcount: 1 },
+          ],
+        });
       if (!url.includes("global-contributions"))
         throw new Error(
           "La collecte globale ne doit pas être limitée au projet d’origine",
@@ -584,7 +632,7 @@ it("une exclusion manuelle ou une réintégration de l’organisation est conser
     included: false,
     exclusion_reason: "Choix manuel",
   };
-  vi.stubGlobal(
+  stubFetch(
     "fetch",
     vi.fn(async () =>
       Response.json(

@@ -22,6 +22,7 @@ interface NamespaceResult {
 interface MWPage {
   contributions: Edit[];
   cursor: string | null;
+  unavailable?: number;
 }
 interface XTEdit {
   username: string;
@@ -41,13 +42,13 @@ export class Collector {
   stopped = false;
   controller = new AbortController();
   preparation: CollectionPreparation | null = null;
-  private editKeys: Set<string>;
+  private editKeys: Map<string, Edit>;
   constructor(
     public session: Session,
     private publish: Publish,
   ) {
-    this.editKeys = new Set(
-      session.edits.map((e) => e.project + ":" + e.revision),
+    this.editKeys = new Map(
+      session.edits.map((e) => [e.project + ":" + e.revision, e]),
     );
   }
   emit() {
@@ -177,7 +178,9 @@ export class Collector {
   async prepare(recollect = false) {
     await this.metadata();
     const p = this.session.params;
-    const sameScope = this.session.collection_signature === signature(p);
+    const sameScope =
+      this.session.collection_signature === signature(p) &&
+      this.session.deleted_collection_version === 1;
     if (!sameScope) {
       // The coverage flags belong to the previous dates/projects, including
       // accounts currently outside the selection that may be included later.
@@ -208,7 +211,11 @@ export class Collector {
     for (const [index, a] of retained.entries()) {
       this.preparation = { done: index, total: retained.length };
       if (
-        (sameScope && a.pre_complete && a.post_complete) ||
+        (sameScope &&
+          a.pre_complete &&
+          a.post_complete &&
+          a.deleted_complete === true &&
+          a.deleted_classified === true) ||
         queued.has(a.username)
       )
         continue;
@@ -220,6 +227,8 @@ export class Collector {
       a.providers = [];
       a.pre_complete = false;
       a.post_complete = false;
+      a.deleted_complete = true;
+      a.deleted_classified = true;
       a.technical = "pending";
       if (p.scope === "all" && !p.observation) {
         tasks.push({
@@ -227,6 +236,27 @@ export class Collector {
           usernames: [a.username],
           attempts: 0,
         });
+        try {
+          const locals = await this.local(a.username);
+          if (!a.included) {
+            tasks.pop();
+            continue;
+          }
+          for (const project of locals.filter((id) =>
+            this.session.catalog.some(
+              (w) => w.id === id && w.family === "wikipedia",
+            ),
+          ))
+            tasks.push({
+              provider: "deleted",
+              usernames: [a.username],
+              project,
+              attempts: 0,
+            });
+        } catch (error) {
+          if (this.stopped) throw error;
+          a.deleted_complete = false;
+        }
         continue;
       }
       try {
@@ -244,6 +274,20 @@ export class Collector {
         for (const project of targets)
           tasks.push({
             provider: "mediawiki",
+            usernames: [a.username],
+            project,
+            attempts: 0,
+            ...(!p.observation && !chosen.includes(project)
+              ? { end: p.end }
+              : {}),
+          });
+        for (const project of targets.filter((id) =>
+          this.session.catalog.some(
+            (w) => w.id === id && w.family === "wikipedia",
+          ),
+        ))
+          tasks.push({
+            provider: "deleted",
             usernames: [a.username],
             project,
             attempts: 0,
@@ -282,6 +326,7 @@ export class Collector {
     // start at the beginning rather than inherit another account's cursor.
     this.session.queue = [...resumed, ...batches];
     this.session.collection_signature = signature(p);
+    this.session.deleted_collection_version = 1;
     this.session.generated_at = new Date().toISOString();
     this.preparation = null;
     this.emit();
@@ -334,7 +379,11 @@ export class Collector {
       if (!this.editKeys.has(key)) {
         e.category = classify(this.session, e.project, e.namespace);
         this.session.edits.push(e);
-        this.editKeys.add(key);
+        this.editKeys.set(key, e);
+      } else {
+        const previous = this.editKeys.get(key)!;
+        // A saved revision may since have been deleted or restored.
+        if (e.deleted_page || previous.deleted_page) Object.assign(previous, e);
       }
     }
   }
@@ -409,7 +458,72 @@ export class Collector {
         this.emit();
         try {
           let cursor: string | null = null;
-          if (task.provider === "mediawiki") {
+          if (
+            task.provider === "deleted" ||
+            task.provider === "deleted_creations"
+          ) {
+            const body = {
+              usernames: task.usernames,
+              project: task.project,
+              start,
+              end: task.end ?? p.reference,
+              cursor: task.cursor,
+              interactive: true,
+            };
+            if (task.provider === "deleted") {
+              const page = await this.call<MWPage>(
+                "deleted-contributions",
+                body,
+                task.usernames,
+              );
+              this.add(page.contributions);
+              await this.classifyProjects(page.contributions, accounts);
+              if (page.unavailable)
+                accounts.forEach((a) => {
+                  a.deleted_complete = false;
+                });
+              if (
+                page.contributions.length &&
+                !this.session.queue.some(
+                  (t) =>
+                    t.provider === "deleted_creations" &&
+                    t.project === task.project &&
+                    t.usernames[0] === task.usernames[0],
+                )
+              ) {
+                this.session.queue.push({
+                  provider: "deleted_creations",
+                  project: task.project,
+                  usernames: task.usernames,
+                  attempts: 0,
+                  end: task.end,
+                  creation_ids: [],
+                });
+              }
+              cursor = page.cursor;
+            } else {
+              const page = await this.call<{
+                revisions: number[];
+                cursor: string | null;
+              }>("deleted-creations", body, task.usernames);
+              task.creation_ids = [
+                ...new Set([...(task.creation_ids ?? []), ...page.revisions]),
+              ];
+              cursor = page.cursor;
+              if (!cursor) {
+                const ids = new Set(task.creation_ids);
+                for (const edit of this.session.edits)
+                  if (
+                    edit.deleted_page &&
+                    edit.project === task.project &&
+                    edit.username === task.usernames[0] &&
+                    dateMs(edit.timestamp) >= dateMs(start) &&
+                    dateMs(edit.timestamp) <= dateMs(task.end ?? p.reference)
+                  )
+                    edit.new_page = ids.has(edit.revision);
+              }
+            }
+          } else if (task.provider === "mediawiki") {
             const page = await this.call<MWPage>(
               "contributions",
               {
@@ -462,6 +576,7 @@ export class Collector {
                 automation: "unknown",
                 tags: [],
                 provider: "xtools",
+                deleted_page: false,
               });
             }
             this.add(edits);
@@ -514,6 +629,15 @@ export class Collector {
               });
               this.complete(task);
             }
+          } else if (
+            task.provider === "deleted" ||
+            task.provider === "deleted_creations"
+          ) {
+            accounts.forEach((a) => {
+              if (task.provider === "deleted") a.deleted_complete = false;
+              else a.deleted_classified = false;
+            });
+            this.complete(task);
           } else {
             accounts.forEach((a) => a.warnings.push(i18n.t("partial")));
             this.complete(task);

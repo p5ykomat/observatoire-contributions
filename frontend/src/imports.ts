@@ -115,6 +115,8 @@ const accountSchema = z.object({
   qualified: z.boolean(),
   pre_complete: z.boolean(),
   post_complete: z.boolean(),
+  deleted_complete: z.boolean().optional(),
+  deleted_classified: z.boolean().optional(),
   global_id: z.number().optional(),
   global_editcount: z.number().optional(),
   invalid: z.boolean().optional(),
@@ -135,6 +137,7 @@ const editSchema = z.object({
   title: z.string(),
   page_id: z.number().int().positive().nullable().optional(),
   new_page: z.boolean().nullable().optional(),
+  deleted_page: z.boolean().optional(),
   category: z.enum(CATEGORIES),
   automation: z.enum(["normal", "bot", "detected", "unknown"]),
   tags: z.array(z.string()),
@@ -215,13 +218,14 @@ const schema = z.object({
     .nullable(),
   queue: z.array(
     z.object({
-      provider: z.enum(["mediawiki", "xtools"]),
+      provider: z.enum(["mediawiki", "xtools", "deleted", "deleted_creations"]),
       usernames: z.array(z.string()).min(1).max(50),
       project: z.string().optional(),
       cursor: z.string().optional(),
       fallback: z.boolean().optional(),
       attempts: z.number().int().min(0),
       end: day.optional(),
+      creation_ids: z.array(z.number().int().positive()).optional(),
     }),
   ),
   diagnostics: z.array(z.string()),
@@ -234,6 +238,8 @@ const schema = z.object({
       wikipedia_languages: z.array(z.string()).max(1000),
       wikipedia_categories: z.array(z.enum(CATEGORIES)),
       projects: z.array(z.string()).max(5000).optional(),
+      include_deleted_creations: z.boolean().optional(),
+      include_deleted_modifications: z.boolean().optional(),
     })
     .optional(),
   new_accounts: z
@@ -244,6 +250,7 @@ const schema = z.object({
       excluded: z.number().int().nonnegative(),
     })
     .optional(),
+  deleted_collection_version: z.literal(1).optional(),
   article_topics: z
     .record(
       z.string(),
@@ -254,6 +261,7 @@ const schema = z.object({
         first_revision: z.number().int().positive().nullable(),
         model: z.literal("outlink-topic-model"),
         threshold: z.literal(0.5),
+        model_skipped: z.boolean().optional(),
         fetched_at: z.string().datetime({ offset: true }),
         status: z.enum([
           "classified",

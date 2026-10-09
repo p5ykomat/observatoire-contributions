@@ -5,9 +5,11 @@ export type ArticleKind = "both" | "creation" | "modification";
 export type TopicMetric = "contributors" | "articles" | "edits";
 export const articleKey = (edit: Edit) =>
   edit.project +
-  (edit.page_id
-    ? ":id:" + edit.page_id
-    : ":title:" + edit.title.replaceAll("_", " "));
+  (edit.deleted_page
+    ? ":deleted:" + edit.title.replaceAll("_", " ")
+    : edit.page_id
+      ? ":id:" + edit.page_id
+      : ":title:" + edit.title.replaceAll("_", " "));
 
 export function articleEdits(result: FollowupResult, session: Session) {
   const wikis = new Set(
@@ -62,7 +64,7 @@ export function summarizeArticles(
   detailed = false,
 ) {
   const eligible = edits.filter(
-    (e) => cache[articleKey(e)]?.status !== "excluded",
+    (e) => e.deleted_page || cache[articleKey(e)]?.status !== "excluded",
   );
   const selected = eligible.filter(
     (e) =>
@@ -84,11 +86,13 @@ export function summarizeArticles(
   const classified = new Set<string>(),
     unclassified = new Set<string>(),
     unavailable = new Set<string>(),
+    deleted = new Set<string>(),
     pending = new Set<string>();
   for (const edit of selected) {
     const metadata = cache[articleKey(edit)];
     const article = identity(edit);
-    if (!metadata) pending.add(article);
+    if (edit.deleted_page) deleted.add(article);
+    else if (!metadata) pending.add(article);
     else if (metadata.status === "unavailable") unavailable.add(article);
     else if (
       metadata.status === "unclassified" ||
@@ -138,6 +142,7 @@ export function summarizeArticles(
     unclassified: unclassified.size,
     unavailable: unavailable.size,
     pending: pending.size,
+    deleted: deleted.size,
     excluded: new Set(
       edits
         .filter((e) => cache[articleKey(e)]?.status === "excluded")

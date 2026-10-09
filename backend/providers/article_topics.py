@@ -13,6 +13,7 @@ class ArticleRequest(BaseModel):
     project: str = Field(min_length=1, max_length=100)
     title: str = Field(min_length=1, max_length=500)
     page_id: int | None = Field(default=None, gt=0)
+    creation_revision: int | None = Field(default=None, gt=0)
 
     @field_validator("title")
     @classmethod
@@ -87,6 +88,9 @@ class ArticleTopicsProvider:
             return result
         if not isinstance(result["page_id"], int) or result["page_id"] <= 0:
             raise SourceError("mediawiki", 502)
+        if request.creation_revision and request.creation_revision != result["first_revision"]:
+            result.update(status="unclassified", model_skipped=True)
+            return result
         prediction = await self.transport.post(
             f"https://api.wikimedia.org/service/lw/inference/v1/models/{MODEL}:predict",
             {
