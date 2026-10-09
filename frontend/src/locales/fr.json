@@ -424,10 +424,10 @@
   "personalProject": "Projet personnel",
   "contributorSort": {
     "title": "Trier les contributeurs",
-    "contributions_desc": "Nombre de contributions : du plus élevé au plus faible",
-    "contributions_asc": "Nombre de contributions : du plus faible au plus élevé",
-    "last_desc": "Dernière contribution : de la plus récente à la plus ancienne",
-    "last_asc": "Dernière contribution : de la plus ancienne à la plus récente"
+    "contributions_desc": "Plus de contributions d’abord",
+    "contributions_asc": "Moins de contributions d’abord",
+    "last_desc": "Dernière contribution récente",
+    "last_asc": "Dernière contribution ancienne"
   },
   "deleted": {
     "title": "Contributions sur des articles ensuite supprimés",
