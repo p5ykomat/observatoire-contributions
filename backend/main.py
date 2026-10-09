@@ -8,10 +8,16 @@ from fastapi.staticfiles import StaticFiles
 
 from backend.analysis.taxonomy import RULES
 from backend.models import BatchRequest, DashboardRequest, GlobalRequest, PageRequest
+from backend.providers.article_topics import ArticleRequest, ArticleTopicsProvider
 from backend.providers.catalog import CatalogProvider
 from backend.providers.centralauth import CentralAuthProvider
 from backend.providers.dashboard import DashboardProvider
 from backend.providers.mediawiki import MediaWikiContributionsProvider
+from backend.providers.new_accounts import (
+    NewAccountsProvider,
+    RegistrationBatch,
+    RegistrationRequest,
+)
 from backend.providers.transport import SourceError, Transport, make_client
 from backend.providers.xtools import XToolsGlobalContributionsProvider
 
@@ -121,6 +127,16 @@ async def dashboard(body: DashboardRequest, request: Request):
     return await DashboardProvider(providers(request)[0]).course(body.url)
 
 
+@app.post("/api/new-accounts")
+async def new_accounts(body: RegistrationRequest, request: Request):
+    return await NewAccountsProvider(providers(request)[0]).page(body)
+
+
+@app.post("/api/new-accounts/verify")
+async def verify_new_accounts(body: RegistrationBatch, request: Request):
+    return await NewAccountsProvider(providers(request)[0]).accounts(body)
+
+
 @app.get("/api/namespaces/{project}")
 async def namespaces(project: str, request: Request):
     transport, catalog = providers(request)
@@ -131,6 +147,12 @@ async def namespaces(project: str, request: Request):
 async def contributions(body: PageRequest, request: Request):
     transport, catalog = providers(request)
     return await MediaWikiContributionsProvider(transport, catalog).page(body)
+
+
+@app.post("/api/article-topics")
+async def article_topics(body: ArticleRequest, request: Request):
+    transport, catalog = providers(request)
+    return await ArticleTopicsProvider(transport, catalog).article(body)
 
 
 @app.post("/api/global-contributions")

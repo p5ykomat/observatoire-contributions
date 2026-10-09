@@ -71,6 +71,8 @@ class Contribution(BaseModel):
     timestamp: str
     namespace: int
     title: str = ""
+    page_id: int | None = None
+    new_page: bool | None = None
     category: Literal[
         "CONTENT", "STRUCTURED_DATA", "MEDIA", "MAINTENANCE", "COMMUNITY", "OTHER"
     ] = "OTHER"

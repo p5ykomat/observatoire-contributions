@@ -2,15 +2,20 @@ import Papa from "papaparse";
 import { z } from "zod";
 import i18n from "./i18n";
 import { CATEGORIES, emptySession, type Account, type Session } from "./types";
+export const MAX_IMPORT_BYTES = 50 * 1024 * 1024;
 export const normalize = (name: string) => {
   const n = name.normalize("NFC").replaceAll("_", " ").trim();
   return n.charAt(0).toUpperCase() + n.slice(1);
 };
-export function importNames(text: string): {
+export function importNames(
+  text: string,
+  maxAccounts = 1000,
+): {
   accounts: Account[];
   diagnostics: string[];
 } {
-  if (text.length > 2 * 1024 * 1024) throw new Error(i18n.t("errors.file"));
+  if (new TextEncoder().encode(text).byteLength > MAX_IMPORT_BYTES)
+    throw new Error(i18n.t("errors.file"));
   const accounts: Account[] = [],
     diagnostics: string[] = [];
   const seen = new Set<string>();
@@ -51,7 +56,12 @@ export function importNames(text: string): {
     });
   });
   if (blank) diagnostics.push(i18n.t("blank", { count: blank }));
-  if (accounts.length > 1000) throw new Error(i18n.t("limit"));
+  if (accounts.length > maxAccounts)
+    throw new Error(
+      i18n.t("limit", {
+        maximum: maxAccounts.toLocaleString(i18n.resolvedLanguage),
+      }),
+    );
   return { accounts, diagnostics };
 }
 export function parseCSV(text: string) {
@@ -62,9 +72,8 @@ export function parseCSV(text: string) {
     throw new Error(i18n.t("errors.csv"));
   return parsed.data;
 }
-export async function readFile(file: File, archive = false) {
-  if (file.size > (archive ? 50 : 2) * 1024 * 1024)
-    throw new Error(i18n.t("errors.file"));
+export async function readFile(file: File) {
+  if (file.size > MAX_IMPORT_BYTES) throw new Error(i18n.t("errors.file"));
   try {
     return new TextDecoder("utf-8", { fatal: true }).decode(
       await file.arrayBuffer(),
@@ -109,6 +118,13 @@ const accountSchema = z.object({
   global_id: z.number().optional(),
   global_editcount: z.number().optional(),
   invalid: z.boolean().optional(),
+  signup: z
+    .object({
+      timestamp: z.string().datetime({ offset: true }),
+      local_id: z.number().int().positive(),
+      original_name: z.string().min(1).max(255),
+    })
+    .optional(),
 });
 const editSchema = z.object({
   username: z.string(),
@@ -117,6 +133,8 @@ const editSchema = z.object({
   timestamp: z.string().datetime({ offset: true }),
   namespace: z.number().int(),
   title: z.string(),
+  page_id: z.number().int().positive().nullable().optional(),
+  new_page: z.boolean().nullable().optional(),
   category: z.enum(CATEGORIES),
   automation: z.enum(["normal", "bot", "detected", "unknown"]),
   tags: z.array(z.string()),
@@ -143,15 +161,27 @@ const paramsSchema = z
     selection: z.enum(["all", "new", "new_reactivated", "manual"]),
     categories: z.array(z.enum(CATEGORIES)),
     exclude_automation: z.boolean(),
+    observation: z
+      .object({
+        mode: z.enum(["registration", "period"]),
+        start: day,
+        end: day,
+      })
+      .refine((o) => o.start <= o.end)
+      .optional(),
   })
-  .refine((p) => p.start <= p.end && p.end <= p.reference);
+  .refine(
+    (p) =>
+      p.start <= p.end &&
+      (p.observation ? p.observation.end <= p.reference : p.end <= p.reference),
+  );
 const schema = z.object({
   schema_version: z.literal("1.0"),
   methodology_version: z.literal("1.0"),
   application_version: z.literal("1.0.0"),
   generated_at: z.string(),
   params: paramsSchema,
-  cohort: z.array(accountSchema).max(1000),
+  cohort: z.array(accountSchema).max(100000),
   edits: z.array(editSchema).max(2000000),
   catalog: z.array(
     z.object({
@@ -203,12 +233,54 @@ const schema = z.object({
       families: z.array(z.string()).max(100),
       wikipedia_languages: z.array(z.string()).max(1000),
       wikipedia_categories: z.array(z.enum(CATEGORIES)),
+      projects: z.array(z.string()).max(5000).optional(),
     })
+    .optional(),
+  new_accounts: z
+    .object({
+      start: day,
+      end: day,
+      unavailable: z.number().int().nonnegative(),
+      excluded: z.number().int().nonnegative(),
+    })
+    .optional(),
+  article_topics: z
+    .record(
+      z.string(),
+      z.object({
+        project: z.string(),
+        title: z.string(),
+        page_id: z.number().int().positive().nullable(),
+        first_revision: z.number().int().positive().nullable(),
+        model: z.literal("outlink-topic-model"),
+        threshold: z.literal(0.5),
+        fetched_at: z.string().datetime({ offset: true }),
+        status: z.enum([
+          "classified",
+          "unclassified",
+          "excluded",
+          "unavailable",
+        ]),
+        topics: z
+          .array(
+            z.object({
+              topic: z.string().max(200),
+              score: z.number().min(0).max(1),
+            }),
+          )
+          .max(64),
+      }),
+    )
     .optional(),
 });
 export function importArchive(text: string): Session {
   try {
     const s = schema.parse(JSON.parse(text));
+    if (
+      Boolean(s.params.observation) !== Boolean(s.new_accounts) ||
+      (s.new_accounts && (!s.question || s.cohort.some((a) => !a.signup)))
+    )
+      throw new Error();
     const names = new Set(s.cohort.map((a) => a.username));
     if (
       names.size !== s.cohort.length ||

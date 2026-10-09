@@ -67,6 +67,8 @@ class MediaWikiContributionsProvider:
                     timestamp=row["timestamp"],
                     namespace=row["ns"],
                     title=row.get("title", ""),
+                    page_id=row.get("pageid"),
+                    new_page=row.get("new") is True or row.get("new") == "",
                     tags=tags,
                     automation=automation,
                     provider="mediawiki",

@@ -416,6 +416,14 @@ input[type="file"] {
   gap: 20px;
   margin: 28px 0;
 }
+.date-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  align-items: end;
+}
+.date-grid > label,
+.date-grid input {
+  min-width: 0;
+}
 .checks {
   display: flex;
   flex-wrap: wrap;
@@ -933,6 +941,66 @@ footer {
   padding: 10px 12px;
   color: var(--muted);
   font-size: 13px;
+}
+.wikipedia-topics {
+  margin-block: 20px;
+}
+.wikipedia-topics table {
+  min-width: 0;
+  width: 100%;
+  table-layout: fixed;
+}
+.wikipedia-topics th,
+.wikipedia-topics td {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+.wikipedia-topics th:first-child {
+  width: 50%;
+}
+.topic-method {
+  margin-block: 16px;
+}
+.topic-bars {
+  list-style: none;
+  padding: 0;
+  margin-block: 24px;
+}
+.topic-bars li {
+  display: grid;
+  grid-template-columns: minmax(130px, 220px) minmax(60px, 1fr) 130px;
+  align-items: center;
+  gap: 16px;
+  padding-block: 10px;
+}
+.topic-name {
+  overflow-wrap: anywhere;
+}
+.topic-bars strong {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+.topic-bar-track {
+  height: 18px;
+  background: #e4edeb;
+  border-radius: 3px;
+}
+.topic-bar-track > span {
+  display: block;
+  height: 100%;
+  background: #16816b;
+  border-radius: 3px;
+}
+@media (max-width: 600px) {
+  .topic-bars li {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+  }
+  .topic-bar-track {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
 }
 @media (max-width: 760px) {
   .followup-table caption {

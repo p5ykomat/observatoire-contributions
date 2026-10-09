@@ -5,23 +5,32 @@ import {
   wikipediaLanguage,
   type FollowupResult,
 } from "../analysis/followup";
-import { exportCSV, exportJSON, exportPDF } from "../exports";
+import { exportCSV, exportJSON, exportPDF, exportCohort } from "../exports";
 import { resultNotices } from "../analysis/resultNotices";
 import { isMessage, translateMessage } from "../i18n";
 import { CATEGORIES, type FollowupQuestion, type Session } from "../types";
 import { contributionLinks } from "../analysis/contributionLinks";
 import { Chart } from "./Chart";
+import { ObservationSettings } from "./ObservationSettings";
+import { registrationSummary } from "../analysis/registrationSummary";
+import type { Params } from "../types";
+import type { ArticleTopics } from "../types";
+import { WikipediaTopics } from "./WikipediaTopics";
 
 export function Results({
   session,
   toggle,
   setQuestion,
+  setParams,
   recollect,
+  saveTopics,
 }: {
   session: Session;
   toggle: (name: string) => void;
   setQuestion: (question: FollowupQuestion) => void;
+  setParams: (params: Partial<Params>) => void;
   recollect: () => void;
+  saveTopics: (cache: Record<string, ArticleTopics>) => void;
 }) {
   const { t, i18n } = useTranslation();
   const [nominative, setNominative] = useState(false);
@@ -117,8 +126,14 @@ export function Results({
           <p className="eyebrow">{t("steps.3")}</p>
           <h1>{session.params.title || t("app")}</h1>
           <p>
-            {session.params.start} → {session.params.end} · {t("reference")} :{" "}
-            {session.params.reference}
+            {session.new_accounts ? (
+              t("newAccounts.cohortDates", session.new_accounts)
+            ) : (
+              <>
+                {session.params.start} → {session.params.end} · {t("reference")}{" "}
+                : {session.params.reference}
+              </>
+            )}
           </p>
         </div>
         <button onClick={() => exportJSON(session)}>{t("json")}</button>
@@ -127,154 +142,170 @@ export function Results({
         className="panel followup-question"
         aria-labelledby="question-title"
       >
-        <h2 id="question-title">{t("fup.title")}</h2>
-        <p>{t("fup.help")}</p>
-        <fieldset>
-          <legend>{t("fup.deadline")}</legend>
-          <div className="actions deadline-buttons">
-            {([30, 60, 90, 120, 365, "today"] as const).map((days) => (
-              <button
-                key={days}
-                aria-pressed={q.days === days}
-                onClick={() => change({ days })}
-              >
-                {days === "today"
-                  ? t("fup.today")
-                  : t("dayAfter", { day: days })}
-              </button>
-            ))}
-          </div>
-          <p className="hint" id="deadline-help">
-            {t("fup.deadlineHelp")}
-          </p>
-          <label className="custom-days">
-            {t("fup.customDays")}
-            <input
-              type="number"
-              min={1}
-              max={36500}
-              aria-describedby="deadline-help"
-              value={q.days === "today" ? "" : q.days}
-              onChange={(e) => change({ days: Number(e.target.value) })}
-            />
-          </label>
-        </fieldset>
-        <p className="query-period" role="status">
-          {r.valid
-            ? t("fup.interval", { start: r.start!, end: r.end! })
-            : t("fup.invalid")}
-        </p>
-        <div className="settings-grid">
-          <fieldset>
-            <legend>{t("fup.projects")}</legend>
-            <label className="check">
-              <input
-                type="checkbox"
-                checked={q.families.includes("*")}
-                onChange={(e) =>
-                  change({ families: e.target.checked ? ["*"] : [] })
-                }
-              />
-              {t("fup.allFamilies")}
-            </label>
-            <div className="checks">
-              {["wikipedia", "commons", "wikidata"]
-                .filter((f) => families.includes(f))
-                .map(familyCheck)}
-            </div>
-            <details>
-              <summary>{t("fup.otherProjects")}</summary>
-              <div className="checks">
-                {families
-                  .filter(
-                    (f) => !["wikipedia", "commons", "wikidata"].includes(f),
-                  )
-                  .map(familyCheck)}
-              </div>
-            </details>
-            <p className="hint">{t("fup.projectHelp")}</p>
-          </fieldset>
-          {(q.families.includes("*") || q.families.includes("wikipedia")) && (
+        <h2 id="question-title">
+          {t(session.new_accounts ? "newAccounts.resultTitle" : "fup.title")}
+        </h2>
+        {session.new_accounts ? (
+          <ObservationSettings
+            session={session}
+            change={setParams}
+            question={setQuestion}
+          />
+        ) : (
+          <>
+            <p>{t("fup.help")}</p>
             <fieldset>
-              <legend>{t("fup.languages")}</legend>
-              <div className="checks">
-                {["fr", "en"]
-                  .filter((code) => languages.includes(code))
-                  .map(languageCheck)}
+              <legend>{t("fup.deadline")}</legend>
+              <div className="actions deadline-buttons">
+                {([30, 60, 90, 120, 365, "today"] as const).map((days) => (
+                  <button
+                    key={days}
+                    aria-pressed={q.days === days}
+                    onClick={() => change({ days })}
+                  >
+                    {days === "today"
+                      ? t("fup.today")
+                      : t("dayAfter", { day: days })}
+                  </button>
+                ))}
               </div>
-              <details>
-                <summary>{t("fup.otherLanguages")}</summary>
-                <p className="hint">{t("fup.languageHelp")}</p>
-                <label>
-                  {t("fup.languageSearch")}
-                  <input
-                    value={languageSearch}
-                    onChange={(e) => setLanguageSearch(e.target.value)}
-                  />
-                </label>
+              <p className="hint" id="deadline-help">
+                {t("fup.deadlineHelp")}
+              </p>
+              <label className="custom-days">
+                {t("fup.customDays")}
+                <input
+                  type="number"
+                  min={1}
+                  max={36500}
+                  aria-describedby="deadline-help"
+                  value={q.days === "today" ? "" : q.days}
+                  onChange={(e) => change({ days: Number(e.target.value) })}
+                />
+              </label>
+            </fieldset>
+            <p className="query-period" role="status">
+              {r.valid
+                ? t("fup.interval", { start: r.start!, end: r.end! })
+                : t("fup.invalid")}
+            </p>
+            <div className="settings-grid">
+              <fieldset>
+                <legend>{t("fup.projects")}</legend>
                 <label className="check">
                   <input
                     type="checkbox"
-                    checked={q.wikipedia_languages.includes("*")}
+                    checked={q.families.includes("*")}
                     onChange={(e) =>
-                      change({
-                        wikipedia_languages: e.target.checked
-                          ? ["*"]
-                          : ["fr", "en"],
-                      })
+                      change({ families: e.target.checked ? ["*"] : [] })
                     }
                   />
-                  {t("fup.allLanguages")}
+                  {t("fup.allFamilies")}
                 </label>
-                <div className="checks language-list">
-                  {languages
-                    .filter(
-                      (code) =>
-                        !["fr", "en"].includes(code) &&
-                        languageName(code)
-                          .toLocaleLowerCase()
-                          .includes(languageSearch.toLocaleLowerCase()),
-                    )
-                    .map(languageCheck)}
+                <div className="checks">
+                  {["wikipedia", "commons", "wikidata"]
+                    .filter((f) => families.includes(f))
+                    .map(familyCheck)}
+                </div>
+                <details>
+                  <summary>{t("fup.otherProjects")}</summary>
+                  <div className="checks">
+                    {families
+                      .filter(
+                        (f) =>
+                          !["wikipedia", "commons", "wikidata"].includes(f),
+                      )
+                      .map(familyCheck)}
+                  </div>
+                </details>
+                <p className="hint">{t("fup.projectHelp")}</p>
+              </fieldset>
+              {(q.families.includes("*") ||
+                q.families.includes("wikipedia")) && (
+                <fieldset>
+                  <legend>{t("fup.languages")}</legend>
+                  <div className="checks">
+                    {["fr", "en"]
+                      .filter((code) => languages.includes(code))
+                      .map(languageCheck)}
+                  </div>
+                  <details>
+                    <summary>{t("fup.otherLanguages")}</summary>
+                    <p className="hint">{t("fup.languageHelp")}</p>
+                    <label>
+                      {t("fup.languageSearch")}
+                      <input
+                        value={languageSearch}
+                        onChange={(e) => setLanguageSearch(e.target.value)}
+                      />
+                    </label>
+                    <label className="check">
+                      <input
+                        type="checkbox"
+                        checked={q.wikipedia_languages.includes("*")}
+                        onChange={(e) =>
+                          change({
+                            wikipedia_languages: e.target.checked
+                              ? ["*"]
+                              : ["fr", "en"],
+                          })
+                        }
+                      />
+                      {t("fup.allLanguages")}
+                    </label>
+                    <div className="checks language-list">
+                      {languages
+                        .filter(
+                          (code) =>
+                            !["fr", "en"].includes(code) &&
+                            languageName(code)
+                              .toLocaleLowerCase()
+                              .includes(languageSearch.toLocaleLowerCase()),
+                        )
+                        .map(languageCheck)}
+                    </div>
+                  </details>
+                </fieldset>
+              )}
+            </div>
+            {(q.families.includes("*") || q.families.includes("wikipedia")) && (
+              <details className="wiki-categories">
+                <summary>{t("fup.wikipediaCategories")}</summary>
+                <p>{t("fup.categoriesHelp")}</p>
+                <div className="checks">
+                  {CATEGORIES.filter(
+                    (category) =>
+                      !["STRUCTURED_DATA", "MEDIA"].includes(category),
+                  ).map((category) => (
+                    <label key={category}>
+                      <input
+                        type="checkbox"
+                        checked={q.wikipedia_categories.includes(category)}
+                        onChange={() =>
+                          change({
+                            wikipedia_categories:
+                              q.wikipedia_categories.includes(category)
+                                ? q.wikipedia_categories.filter(
+                                    (c) => c !== category,
+                                  )
+                                : [...q.wikipedia_categories, category],
+                          })
+                        }
+                      />
+                      <span>
+                        {t("category." + category)}
+                        <small className="category-example">
+                          {t("categoryExamples." + category)}
+                        </small>
+                      </span>
+                    </label>
+                  ))}
                 </div>
               </details>
-            </fieldset>
-          )}
-        </div>
-        {(q.families.includes("*") || q.families.includes("wikipedia")) && (
-          <details className="wiki-categories">
-            <summary>{t("fup.wikipediaCategories")}</summary>
-            <p>{t("fup.categoriesHelp")}</p>
-            <div className="checks">
-              {CATEGORIES.filter(
-                (category) => !["STRUCTURED_DATA", "MEDIA"].includes(category),
-              ).map((category) => (
-                <label key={category}>
-                  <input
-                    type="checkbox"
-                    checked={q.wikipedia_categories.includes(category)}
-                    onChange={() =>
-                      change({
-                        wikipedia_categories: q.wikipedia_categories.includes(
-                          category,
-                        )
-                          ? q.wikipedia_categories.filter((c) => c !== category)
-                          : [...q.wikipedia_categories, category],
-                      })
-                    }
-                  />
-                  <span>
-                    {t("category." + category)}
-                    <small className="category-example">
-                      {t("categoryExamples." + category)}
-                    </small>
-                  </span>
-                </label>
-              ))}
-            </div>
-          </details>
+            )}
+            <p className="hint">{t("fup.otherCategories")}</p>
+          </>
         )}
-        <p className="hint">{t("fup.otherCategories")}</p>
       </section>
       {!r.valid && <p className="notice">{t("fup.invalid")}</p>}
       {!r.enabled && <p className="notice">{t("fup.noProjects")}</p>}
@@ -311,7 +342,9 @@ export function Results({
           )}
         </div>
       ))}
-      {(!r.scopeCovered || (!r.reached && q.days === "today")) && (
+      {(!r.collection.current ||
+        !r.scopeCovered ||
+        (!r.reached && q.days === "today")) && (
         <button onClick={recollect}>{t("fup.recollect")}</button>
       )}
       {r.n === 0 ? (
@@ -328,7 +361,7 @@ export function Results({
       </p>
       <div className="kpis">
         {[
-          [t("retained"), r.n],
+          [t(session.new_accounts ? "newAccounts.retained" : "retained"), r.n],
           [t("fup.contributing"), r.active],
           [t("fup.not_contributing"), r.inactive],
           [t("fup.unknown"), r.unknown],
@@ -340,23 +373,50 @@ export function Results({
           </div>
         ))}
       </div>
-      <p className="notice">
-        {r.complete
-          ? t("fup.answer", {
-              active: r.active,
-              total: r.n,
-              rate: r.rate!.toLocaleString(i18n.resolvedLanguage, {
-                maximumFractionDigits: 1,
-              }),
-            })
-          : t("fup.minimum", { active: r.active, total: r.n })}
-      </p>
+      {session.new_accounts && (
+        <section
+          className="panel registration-report"
+          aria-labelledby="registration-report-title"
+        >
+          <h2 id="registration-report-title">{t("newAccounts.reportTitle")}</h2>
+          <p>{registrationSummary(session)}</p>
+          <p className="hint">{t("newAccounts.reportHelp")}</p>
+          {session.new_accounts.unavailable > 0 && (
+            <p>
+              {t("newAccounts.unavailable", {
+                count: session.new_accounts.unavailable,
+              })}
+            </p>
+          )}
+        </section>
+      )}
+      {!session.new_accounts && (
+        <p className="notice">
+          {r.complete
+            ? t("fup.answer", {
+                active: r.active,
+                total: r.n,
+                rate: r.rate!.toLocaleString(i18n.resolvedLanguage, {
+                  maximumFractionDigits: 1,
+                }),
+              })
+            : t("fup.minimum", { active: r.active, total: r.n })}
+        </p>
+      )}
       <div className="charts">
         <Chart
-          title={t("fup.activityTitle")}
-          description={t("fup.activityHelp")}
+          title={t(
+            session.new_accounts
+              ? "newAccounts.activityTitle"
+              : "fup.activityTitle",
+          )}
+          description={t(
+            session.new_accounts
+              ? "newAccounts.activityHelp"
+              : "fup.activityHelp",
+          )}
           kind="pie"
-          countUnit="participants"
+          countUnit={session.new_accounts ? "accounts" : "participants"}
           percentageBase={r.n}
           points={[
             { label: t("fup.contributing"), value: r.active },
@@ -365,9 +425,15 @@ export function Results({
           ]}
         />
         <Chart
-          title={t("fup.projectTitle")}
-          description={t("fup.familyHelp")}
-          countUnit="participants"
+          title={t(
+            session.new_accounts
+              ? "newAccounts.projectTitle"
+              : "fup.projectTitle",
+          )}
+          description={t(
+            session.new_accounts ? "newAccounts.familyHelp" : "fup.familyHelp",
+          )}
+          countUnit={session.new_accounts ? "accounts" : "participants"}
           percentageBase={r.n}
           points={r.byFamily.map((f) => ({
             label: familyName(f.family),
@@ -375,6 +441,7 @@ export function Results({
           }))}
         />
       </div>
+      <WikipediaTopics session={session} result={r} save={saveTopics} />
       <section className="panel" aria-labelledby="contributor-list-title">
         <h2 id="contributor-list-title">{t("detail")}</h2>
         <p>{t("fup.tableHelp")}</p>
@@ -587,6 +654,11 @@ export function Results({
         <p>{t("fup.exportHelp")}</p>
         <p className="hint">{t("saveHelp")}</p>
         <div className="actions">
+          {session.new_accounts && (
+            <button onClick={() => exportCohort(session)}>
+              {t("newAccounts.saveCohort")}
+            </button>
+          )}
           <button onClick={() => exportCSV(session)}>{t("csv")}</button>
           <button onClick={() => exportCSV(session, true)}>
             {t("summary")}

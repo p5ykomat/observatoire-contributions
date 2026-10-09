@@ -127,16 +127,18 @@ export function QualificationTable({
                 <details open={expanded}>
                   <summary>{t("accountDetails")}</summary>
                   <dl className="account-details">
-                    <div>
-                      <dt>{t("age")}</dt>
-                      <dd>
-                        {a.registration && start
-                          ? Math.floor(
-                              (dateMs(start) - dateMs(a.registration)) / DAY,
-                            )
-                          : t("unknown")}
-                      </dd>
-                    </div>
+                    {!a.signup && (
+                      <div>
+                        <dt>{t("age")}</dt>
+                        <dd>
+                          {a.registration && start
+                            ? Math.floor(
+                                (dateMs(start) - dateMs(a.registration)) / DAY,
+                              )
+                            : t("unknown")}
+                        </dd>
+                      </div>
+                    )}
                     <div>
                       <dt>{t("globalEdits")}</dt>
                       <dd>{a.global_editcount ?? t("unknown")}</dd>

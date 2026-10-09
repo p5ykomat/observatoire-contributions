@@ -18,7 +18,29 @@ An independent tool for studying public contribution activity after a training s
 
 Changing language preserves the current analysis. Reinstating excluded accounts or expanding the selection may require additional collection. Changing collection dates or projects requires a new collection.
 
+## New registrations on French Wikipedia
+
+The fourth import source loads a single registration day or an inclusive date range. It pages the public log actions `create`, `create2` and `byemail`, using the target account rather than the log actor. IPs, active and expired temporary accounts, and automatic attachments are excluded. Local IDs follow renamed accounts when available.
+
+The supported format starts on **18 April 2006**, the first full UTC day after `create` appeared on French Wikipedia. Older entries exist from September 2005 but are not supported. Later CentralAuth unification dates do not replace local signup dates. Earlier global registration dates reveal pre-existing accounts. Hidden entries and unavailable accounts are reported outside the analysable cohort.
+
+Observe each account from its own signup until a chosen date, or during a date range after signup. The editable preset selects French, English and German Wikipedia, Commons, Wikidata, French Wiktionary and French Wikisource. Alternatively select all public projects in every language, or projects by family and language. Contribution type filters apply only to Wikipedia. Other projects count all public revisions, which are not a complete inventory of uploads or log actions.
+
+Accounts identified as bots are excluded by default. The checkbox excluding edits flagged as bot or automated is visible and enabled by default in this flow. Collection counters refresh every two seconds without additional network requests. Discovering the projects where accounts contribute is shown separately from the number of fully processed accounts.
+
+The interface shows a fixed estimate of about 17 minutes to examine the contribution projects of 1,000 accounts. This assumes one one-second request per account, or 16 minutes 40 seconds, and is not a measured duration. Retrieving edits adds a variable amount of time.
+
+Text reports, charts and exports use the same criteria. Accounts with zero edits stay in the denominator. Accounts contributing to several projects count once overall. At least one edit during an interval does not establish continuous activity or retention on the deadline itself.
+
+Every log page is followed and accounts are verified in batches of 50. Pause and resume work in the current page. Lists can be exported as CSV or TXT, with the registration date or range in the filename. CSV preserves individual signup dates, local IDs and exclusions. It imports through the main file input without rereading the log; IDs resolve current usernames. TXT preserves usernames and the range in its filename. Analysis JSON then preserves registration provenance, observation criteria and collection progress. The browser must stay open during requests. Monthly cohorts and historical observations may take substantial time; pages are not skipped to speed collection up.
+
 ## Understanding the results
+
+In the results, **Analyse article topics** starts optional analysis of Wikipedia’s main namespace. Wikimedia’s multilingual [`outlink-topic-model`](https://meta.wikimedia.org/wiki/Machine_learning_models/Production/Language_agnostic_link-based_article_topic), served by Lift Wing, uses article links to estimate topics. Scores of at least 0.5 are retained. Topics concern the current article, not the text added or the historical version. Redirects, disambiguations and currently inaccessible pages are excluded.
+
+Choose creations, edits or both, then contributors, distinct articles or contributions. Counts and percentages show their denominator. Topics are grouped into eight broad themes, plus any unknown themes; subtopics are optional. Units may appear in several topics, so percentages can sum to more than 100%. Model confidence scores are never treated as contribution percentages. Classification is beta and can be incorrect.
+
+Coverage distinguishes classified articles, articles with no recognised topic, unavailable sources and articles still to examine. Analysis follows the result filters and runs only on request, separately from contribution collection. Pause and resume preserve examined articles in the page; JSON preserves them after a pause or at completion. Topic CSV includes the measure, filter, denominator, period and model. A short explanation and the official model card are directly accessible in the interface.
 
 The main question is: **how many participants made at least one edit after the event?**
 
@@ -37,7 +59,7 @@ Contributions are public revisions, not the amount of text added or a complete i
 
 APIs may be unavailable, delayed or rate limited. Hidden revisions and unattached accounts may be missing. Automation detection is partial. Renamed accounts are not automatically linked to a new identity. Very active accounts may require many requests and substantial browser memory.
 
-Imports support up to 1,000 accounts, TXT/CSV files up to 2 MB and JSON files up to 50 MB. Collection is not silently truncated.
+Ordinary manual imports support up to 1,000 accounts. Cohort TXT files named by the module can contain up to 100,000 accounts. The registration log module does not apply this limit; JSON restoration accepts up to 100,000 accounts. TXT, CSV and JSON files up to 50 MB are accepted. Collection is not silently truncated.
 
 ## Privacy
 
