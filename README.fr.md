@@ -47,9 +47,9 @@ Le serveur ne conserve pas les cohortes de participants. Son cache partagé cont
 
 ## Maintenance et vérification
 
-Le service fonctionne sur Toolforge. Les instructions de maintenance figurent dans le [guide de déploiement et de vérification, en anglais](docs/TOOLFORGE.md).
+Le service fonctionne sur Toolforge.
 
-Les tests automatiques vérifient les calculs, les erreurs de collecte et les interactions dans le navigateur avec des réponses API simulées. Ces données de test ne sont pas utilisées pour les analyses réelles. Les contrôles d’intégration avec les API publiques sont distincts ; les [notes de vérification](docs/verification.md) présentent les contrôles consignés et leurs limites.
+Les tests automatiques vérifient les calculs, les erreurs de collecte et les interactions dans le navigateur avec des réponses API simulées. Ces données de test ne sont pas utilisées pour les analyses réelles. Les contrôles d’intégration avec les API publiques sont distincts.
 
 ## Crédit et licence
 

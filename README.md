@@ -47,9 +47,9 @@ The backend does not persist participant cohorts. Its shared cache contains only
 
 ## Maintenance and verification
 
-The service runs on Toolforge. See the [deployment and verification guide](docs/TOOLFORGE.md) for maintenance instructions.
+The service runs on Toolforge.
 
-Automated tests cover calculations, collection errors and browser interactions using simulated API responses. These test fixtures are not used for live analyses. Public API integration checks are separate; see the [verification notes, in French](docs/verification.md) for recorded checks and limitations.
+Automated tests cover calculations, collection errors and browser interactions using simulated API responses. These test fixtures are not used for live analyses. Public API integration checks are separate.
 
 ## Credit and license
 
