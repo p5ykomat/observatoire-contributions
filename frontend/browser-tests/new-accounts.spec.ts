@@ -144,7 +144,7 @@ test("complete registration flow, Commons only, zero edits, textual report and a
   await expect(
     page.getByText("Date de fin de l’action", { exact: true }),
   ).toHaveCount(0);
-  await page.getByLabel("Pendant une période précise", { exact: true }).check();
+  await page.getByLabel("Sur une plage de dates après l’inscription de chaque compte", { exact: true }).check();
   await page
     .getByLabel("Contributions à partir du", { exact: true })
     .fill("2026-03-01");
@@ -282,7 +282,7 @@ test("saved cohort CSV imports through the main file input without querying the 
       { exact: true },
     ),
   ).toBeVisible();
-  await page.getByLabel("Pendant une période précise", { exact: true }).check();
+  await page.getByLabel("Sur une plage de dates après l’inscription de chaque compte", { exact: true }).check();
   await page
     .getByLabel("Contributions à partir du", { exact: true })
     .fill("2026-03-01");

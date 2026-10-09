@@ -451,10 +451,14 @@
     "existingGlobal": "Le compte global existait déjà avant cette inscription locale.",
     "cohortDates": "Comptes créés sur Wikipédia en français du {{start}} au {{end}}.",
     "observation": "2. Quand observer leurs contributions ?",
-    "observationHelp": "Les dates de création définissent le groupe. Les dates ci-dessous définissent les contributions à compter.",
+    "observationHelp": "Vous suivez les mêmes comptes après leur inscription. Choisissez jusqu’à quelle date, ou sur quelle plage de dates compter leurs contributions.",
     "mode": {
       "registration": "Depuis l’inscription de chaque compte jusqu’à une date",
-      "period": "Pendant une période précise"
+      "period": "Sur une plage de dates après l’inscription de chaque compte"
+    },
+    "modeHelp": {
+      "registration": "Les contributions sont comptées dès l’inscription de chaque compte, jusqu’à la date choisie incluse.",
+      "period": "Choisissez une date de début et une date de fin. Seules les contributions dans cette plage sont comptées, après l’inscription de chaque compte."
     },
     "observedFrom": "Contributions à partir du",
     "observedTo": "Contributions jusqu’au",

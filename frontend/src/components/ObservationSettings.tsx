@@ -59,6 +59,7 @@ export function ObservationSettings({
             </label>
           ))}
         </div>
+        <p className="hint">{t("newAccounts.modeHelp." + o.mode)}</p>
         <div className="form-grid">
           {o.mode === "period" && (
             <label>

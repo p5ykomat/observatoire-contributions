@@ -451,10 +451,14 @@
     "existingGlobal": "The global account already existed before this local registration.",
     "cohortDates": "Accounts created on French Wikipedia from {{start}} through {{end}}.",
     "observation": "2. When should contributions be observed?",
-    "observationHelp": "Registration dates define the cohort. The dates below define the contributions to count.",
+    "observationHelp": "You follow the same accounts after registration. Choose an end date or a date range in which to count their contributions.",
     "mode": {
       "registration": "From each account’s registration until a date",
-      "period": "During a specific period"
+      "period": "Within a date range after each account’s registration"
+    },
+    "modeHelp": {
+      "registration": "Contributions count from each account’s registration through the chosen end date, inclusive.",
+      "period": "Choose a start date and an end date. Only contributions within this range count, after each account’s registration."
     },
     "observedFrom": "Contributions from",
     "observedTo": "Contributions through",
