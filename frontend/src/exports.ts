@@ -5,7 +5,33 @@ import autoTable from "jspdf-autotable";
 import i18n from "./i18n";
 import { analyzeFollowup } from "./analysis/followup";
 import { resultNotices } from "./analysis/resultNotices";
+import { registrationSummary } from "./analysis/registrationSummary";
 import type { Session } from "./types";
+import type { RegistrationImport } from "./registrationImporter";
+import { cohortFilename, cohortRows } from "./cohortFiles";
+export function exportCohort(
+  data: RegistrationImport | Session,
+  format: "csv" | "txt" = "csv",
+) {
+  const rows = cohortRows(data);
+  if (!rows.length) return;
+  download(
+    new Blob(
+      [
+        format === "csv"
+          ? csvText(rows)
+          : rows.map((row) => row.username).join("\n"),
+      ],
+      {
+        type:
+          format === "csv"
+            ? "text/csv;charset=utf-8"
+            : "text/plain;charset=utf-8",
+      },
+    ),
+    cohortFilename(rows[0].cohort_start, rows[0].cohort_end, format),
+  );
+}
 export function download(blob: Blob, name: string) {
   const url = URL.createObjectURL(blob),
     anchor = document.createElement("a");
@@ -41,6 +67,13 @@ export function exportCSV(s: Session, summary = false) {
     analysis_end: r.end,
     data_until: s.params.reference,
     question: r.question,
+    ...(s.new_accounts
+      ? {
+          registration_cohort: s.new_accounts,
+          observation: s.params.observation,
+          report: registrationSummary(s),
+        }
+      : {}),
   };
   const rows = summary
     ? [
@@ -149,11 +182,13 @@ export function makePDF(s: Session, nominative = false) {
   heading(t("app"));
   paragraph(s.params.title || t("title"));
   paragraph(
-    t("pdfDates", {
-      start: s.params.start,
-      end: s.params.end,
-      reference: s.params.reference,
-    }),
+    s.new_accounts
+      ? t("newAccounts.cohortDates", s.new_accounts)
+      : t("pdfDates", {
+          start: s.params.start,
+          end: s.params.end,
+          reference: s.params.reference,
+        }),
   );
   paragraph(
     t("pdfGenerated", {
@@ -161,8 +196,8 @@ export function makePDF(s: Session, nominative = false) {
       version: s.application_version,
     }),
   );
-  heading(t("fup.title"));
-  paragraph(t("fup.help"));
+  heading(t(s.new_accounts ? "newAccounts.resultTitle" : "fup.title"));
+  paragraph(s.new_accounts ? registrationSummary(s) : t("fup.help"));
   paragraph(
     r.valid
       ? t("fup.interval", { start: r.start!, end: r.end! })

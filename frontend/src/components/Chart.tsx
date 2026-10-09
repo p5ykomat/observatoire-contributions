@@ -39,7 +39,7 @@ export function Chart({
   kind?: "bar" | "line" | "pie";
   unit?: string;
   description?: string;
-  countUnit?: "participants" | "contributions";
+  countUnit?: "participants" | "contributions" | "accounts";
   percentageBase?: number;
 }) {
   const { t, i18n } = useTranslation();
@@ -219,15 +219,19 @@ export function Chart({
           <p className="hint">
             {percentage
               ? t(
-                  countUnit === "participants"
-                    ? "percentageParticipants"
-                    : "percentageContributions",
+                  countUnit === "accounts"
+                    ? "newAccounts.percentageAccounts"
+                    : countUnit === "participants"
+                      ? "percentageParticipants"
+                      : "percentageContributions",
                   { count: total },
                 )
               : t(
-                  countUnit === "participants"
-                    ? "participantUnit"
-                    : "contributionUnit",
+                  countUnit === "accounts"
+                    ? "newAccounts.accountUnit"
+                    : countUnit === "participants"
+                      ? "participantUnit"
+                      : "contributionUnit",
                 )}
           </p>
         </>

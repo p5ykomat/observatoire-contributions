@@ -18,6 +18,20 @@ Un outil indépendant pour étudier les contributions publiques après une forma
 
 Le changement de langue conserve l’analyse en cours. Réintégrer des comptes exclus ou élargir la sélection peut nécessiter une collecte complémentaire. Changer les dates ou les projets à collecter exige une nouvelle collecte.
 
+## Nouveaux inscrits sur Wikipédia en français
+
+La quatrième source d’import charge les comptes créés un jour précis ou entre deux dates incluses. Le module utilise les actions `create`, `create2` et `byemail` du journal public. Les IP, les comptes temporaires (actifs ou expirés) et les rattachements automatiques sont exclus. Le compte créé est identifié à partir de la cible du journal, pas du compte qui a effectué la création. Les identifiants locaux permettent de retrouver les comptes renommés lorsqu’ils sont disponibles.
+
+Le format pris en charge commence le **18 avril 2006**, premier jour UTC complet après l’apparition de l’action `create` dans le journal de Wikipédia en français. Des entrées plus anciennes existent depuis septembre 2005, mais leur format n’est pas pris en charge. Les dates d’unification CentralAuth, parfois postérieures à l’inscription locale, ne remplacent pas la date du journal. Une date globale antérieure à l’inscription locale révèle un compte déjà existant. Les entrées masquées ou les comptes introuvables sont signalés et restent hors du groupe analysable.
+
+Après import, choisissez l’observation depuis l’inscription propre à chaque compte jusqu’à une date, ou pendant une période précise. La sélection rapide propose Wikipédia en français, anglais et allemand, Commons et Wikidata. Chaque projet peut être décoché. Les autres modes couvrent tous les projets publics et toutes les langues, ou une sélection par famille et langue.
+
+Les types de pages choisis filtrent uniquement Wikipédia. Tous les types de révisions publiques des autres projets sont pris en compte. Une contribution est une révision publique, y compris sur Commons, et non chaque opération de téléversement ou chaque entrée de journal.
+
+Le bilan textuel, les graphiques et les exports utilisent les mêmes critères. Un compte sans modification reste au dénominateur. Un compte présent sur plusieurs projets compte une seule fois dans le total. « Au moins une modification pendant la période » ne démontre pas une activité continue ni une rétention à la date de fin.
+
+Le chargement suit toutes les pages du journal, puis vérifie les comptes par lots de 50. Il peut être mis en pause et repris dans la même page. Les listes sont exportables en CSV et TXT, avec la date ou la plage dans le nom du fichier. Le CSV conserve aussi les dates d’inscription, les identifiants locaux et les exclusions. Il se réimporte depuis le champ de fichier de l’import principal, sans relire le journal ; les identifiants servent à rechercher les pseudos actuels. Le TXT conserve seulement les pseudos et la période dans son nom. L’analyse JSON conserve ensuite les dates de création, les critères d’observation et la progression de collecte. Le navigateur doit rester ouvert pendant les appels. Les cohortes mensuelles et les observations anciennes peuvent prendre longtemps ; aucune page n’est ignorée pour accélérer la collecte.
+
 ## Comprendre les résultats
 
 La question principale est : **combien de participants ont fait au moins une modification après l’événement ?**
@@ -37,7 +51,7 @@ Les contributions sont des révisions publiques, pas le volume de texte ajouté 
 
 Les API peuvent être indisponibles, retardées ou limiter les appels. Des révisions masquées et des comptes non rattachés peuvent manquer. La détection de l’automatisation est partielle. Un compte renommé n’est pas automatiquement relié à sa nouvelle identité. Les comptes très actifs peuvent nécessiter de nombreuses requêtes et beaucoup de mémoire dans le navigateur.
 
-Les imports acceptent jusqu’à 1 000 comptes, des fichiers TXT/CSV de 2 Mo et des fichiers JSON de 50 Mo. La collecte n’est pas tronquée silencieusement.
+Les imports manuels ordinaires acceptent jusqu’à 1 000 comptes. Les TXT de cohorte nommés par le module peuvent contenir jusqu’à 100 000 comptes. Le module du journal n’applique pas cette limite ; la restauration JSON accepte jusqu’à 100 000 comptes. Les fichiers sont limités à des fichiers TXT/CSV de 2 Mo et des fichiers JSON de 50 Mo. La collecte n’est pas tronquée silencieusement.
 
 ## Confidentialité
 

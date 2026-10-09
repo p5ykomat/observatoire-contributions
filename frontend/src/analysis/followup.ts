@@ -6,10 +6,20 @@ export const wikipediaLanguage = (project: Project) =>
   project.domain.split(".")[0];
 export function analyzeFollowup(s: Session) {
   const q = s.question ?? defaultQuestion();
-  const startMs = dateMs(s.params.end) + DAY;
+  const observation = s.params.observation;
+  const startMs = observation
+    ? dateMs(
+        observation.mode === "period"
+          ? observation.start
+          : (s.new_accounts?.start ?? s.params.start),
+      )
+    : dateMs(s.params.end) + DAY;
   const reference = dateMs(s.params.reference);
-  const deadline =
-    q.days === "today" ? dateMs(today()) : dateMs(s.params.end) + q.days * DAY;
+  const deadline = observation
+    ? dateMs(observation.end)
+    : q.days === "today"
+      ? dateMs(today())
+      : dateMs(s.params.end) + q.days * DAY;
   const valid =
     (q.days === "today" ||
       (Number.isInteger(q.days) && q.days >= 1 && q.days <= 36500)) &&
@@ -20,6 +30,7 @@ export function analyzeFollowup(s: Session) {
   const observedEnd = Math.min(deadline, reference);
   const projects = s.catalog.filter(
     (project) =>
+      (!q.projects || q.projects.includes(project.id)) &&
       (q.families.includes("*") || q.families.includes(project.family)) &&
       (project.family !== "wikipedia" ||
         q.wikipedia_languages.includes("*") ||
@@ -60,9 +71,17 @@ export function analyzeFollowup(s: Session) {
           .filter((edit) => {
             const project = catalog.get(edit.project);
             const day = dateMs(edit.timestamp);
+            const afterSignup =
+              !observation ||
+              observation.mode !== "registration" ||
+              Date.parse(edit.timestamp) >=
+                Date.parse(
+                  account.signup?.timestamp ?? account.registration ?? "",
+                );
             return (
               project &&
               projectIds.has(edit.project) &&
+              afterSignup &&
               day >= startMs &&
               day <= observedEnd &&
               (project.family !== "wikipedia" ||

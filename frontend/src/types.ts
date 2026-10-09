@@ -44,6 +44,7 @@ export interface Account {
   qualified: boolean;
   pre_complete: boolean;
   post_complete: boolean;
+  signup?: { timestamp: string; local_id: number; original_name: string };
 }
 export interface Edit {
   username: string;
@@ -74,6 +75,7 @@ export interface Params {
   selection: "all" | "new" | "new_reactivated" | "manual";
   categories: Category[];
   exclude_automation: boolean;
+  observation?: { mode: "registration" | "period"; start: string; end: string };
 }
 export interface Task {
   provider: "mediawiki" | "xtools";
@@ -111,12 +113,19 @@ export interface Session {
   stage: number;
   collection_signature: string | null;
   question?: FollowupQuestion;
+  new_accounts?: {
+    start: string;
+    end: string;
+    unavailable: number;
+    excluded: number;
+  };
 }
 export interface FollowupQuestion {
   days: number | "today";
   families: string[];
   wikipedia_languages: string[];
   wikipedia_categories: Category[];
+  projects?: string[];
 }
 export function defaultQuestion(): FollowupQuestion {
   return {

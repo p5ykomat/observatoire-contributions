@@ -48,5 +48,6 @@ export function signature(p: Params) {
     p.scope,
     p.projects,
     p.origins,
+    ...(p.observation ? [p.observation] : []),
   ]);
 }

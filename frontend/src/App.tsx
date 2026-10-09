@@ -28,6 +28,14 @@ import { CreationSettings } from "./components/CreationSettings";
 import { QualificationTable } from "./components/QualificationTable";
 import { ProjectPicker } from "./components/ProjectPicker";
 import { SelectionReview } from "./components/SelectionReview";
+import { NewAccountsImport } from "./components/NewAccountsImport";
+import { ObservationSettings } from "./components/ObservationSettings";
+import {
+  PRESET_PROJECTS,
+  type RegistrationImport,
+} from "./registrationImporter";
+import { defaultQuestion } from "./types";
+import { parseCohortCSV, cohortFileDates } from "./cohortFiles";
 interface Dashboard {
   title: string;
   start: string | null;
@@ -79,14 +87,17 @@ export default function App() {
       if (current === generation.current) setBusy(false);
     }
   }
-  function importText(text: string) {
+  function importText(
+    text: string,
+    cohortDates?: { start: string; end: string },
+  ) {
     try {
-      const data = importNames(text);
+      const data = importNames(text, cohortDates ? 100000 : 1000);
       if (!data.accounts.length) throw new Error(t("errors.names"));
       setS((previous) => ({
         ...emptySession(),
         catalog: previous.catalog,
-        params: previous.params,
+        params: { ...previous.params, observation: undefined },
         cohort: data.accounts,
         diagnostics: data.diagnostics,
         stage: 1,
@@ -103,9 +114,58 @@ export default function App() {
       setError((e as Error).message);
     }
   }
+  function importRegistrations(data: RegistrationImport) {
+    const base = emptySession();
+    setDashboardDates(null);
+    setDateChoice("");
+    setPendingExclusions({});
+    setExclusions("");
+    customScopeInitialized.current = true;
+    setS({
+      ...base,
+      catalog: s.catalog,
+      cohort: data.accounts,
+      stage: 1,
+      new_accounts: {
+        start: data.start,
+        end: data.end,
+        unavailable: data.unavailable,
+        excluded: data.excluded,
+      },
+      params: {
+        ...base.params,
+        title: t("newAccounts.analysisTitle"),
+        start: data.start,
+        end: data.end,
+        scope: "custom",
+        projects: [...PRESET_PROJECTS],
+        selection: "all",
+        pre_days: 1,
+        observation: { mode: "registration", start: data.start, end: today() },
+      },
+      question: {
+        ...defaultQuestion(),
+        days: "today",
+        families: ["*"],
+        wikipedia_languages: ["*"],
+        projects: [...PRESET_PROJECTS],
+      },
+    });
+  }
   function validateDates() {
     const p = s.params;
     const window = creationWindow(p);
+    if (p.observation) {
+      const o = p.observation;
+      if (
+        !o.end ||
+        o.end > today() ||
+        (o.mode === "period" && (!o.start || o.start > o.end)) ||
+        (o.mode === "registration" && o.end < s.new_accounts!.end) ||
+        (p.scope === "custom" && !p.projects.length)
+      )
+        throw new Error(t("errors.dates"));
+    }
     if (
       !p.start ||
       !p.end ||
@@ -167,7 +227,7 @@ export default function App() {
     if (!aggregate(s).n) throw new Error(t("zeroSelection"));
     const session = structuredClone(s);
     session.stage = 3;
-    session.params.reference = today();
+    session.params.reference = session.params.observation?.end ?? today();
     const current = generation.current;
     const engine = new Collector(session, (value) => {
       if (current === generation.current) setS(value);
@@ -178,15 +238,31 @@ export default function App() {
     await engine.prepare(recollect);
     await engine.run();
   }
-  const [pendingExclusions, setPendingExclusions] = useState<Record<string, boolean>>({});
-  const typedExclusions = new Set(exclusions.split(/\r?\n/).map(normalize).filter(Boolean));
-  const hasPendingExclusions = s.cohort.some(a =>
-    (typedExclusions.has(a.username) ? true : pendingExclusions[a.username] ?? !a.included) !== !a.included);
+  const [pendingExclusions, setPendingExclusions] = useState<
+    Record<string, boolean>
+  >({});
+  const typedExclusions = new Set(
+    exclusions.split(/\r?\n/).map(normalize).filter(Boolean),
+  );
+  const hasPendingExclusions = s.cohort.some(
+    (a) =>
+      (typedExclusions.has(a.username)
+        ? true
+        : (pendingExclusions[a.username] ?? !a.included)) !== !a.included,
+  );
   function applyExclusions() {
-    update({ cohort: s.cohort.map(a => {
-      const excluded = typedExclusions.has(a.username) || (pendingExclusions[a.username] ?? !a.included);
-      return { ...a, included: !excluded, exclusion_reason: excluded ? a.exclusion_reason || t("excluded") : "" };
-    }) });
+    update({
+      cohort: s.cohort.map((a) => {
+        const excluded =
+          typedExclusions.has(a.username) ||
+          (pendingExclusions[a.username] ?? !a.included);
+        return {
+          ...a,
+          included: !excluded,
+          exclusion_reason: excluded ? a.exclusion_reason || t("excluded") : "",
+        };
+      }),
+    });
     setPendingExclusions({});
     setExclusions("");
   }
@@ -250,6 +326,7 @@ export default function App() {
       params: {
         ...s.params,
         title: data.title,
+        observation: undefined,
         start: "",
         end: "",
         origins: [origin],
@@ -265,10 +342,61 @@ export default function App() {
     const text = await readFile(file);
     if (current !== generation.current) return;
     if (file.name.toLowerCase().endsWith(".csv")) {
+      let cohort: RegistrationImport | null;
+      try {
+        cohort = parseCohortCSV(text);
+      } catch {
+        throw new Error(t("newAccounts.invalidFile"));
+      }
+      if (cohort) {
+        // A saved cohort never rereads the creation log. Local IDs resolve
+        // names that have changed since export, before global verification.
+        const controller = new AbortController();
+        importRequest.current = controller;
+        for (let offset = 0; offset < cohort.accounts.length; offset += 50) {
+          const group = cohort.accounts.slice(offset, offset + 50);
+          const verified = await retry(
+            () =>
+              api<{ accounts: Partial<Account>[]; excluded: number }>(
+                "new-accounts/verify",
+                {
+                  candidates: group.map((a) => ({
+                    local_id: a.signup!.local_id,
+                    name: a.username,
+                    timestamp: a.signup!.timestamp,
+                  })),
+                },
+                controller.signal,
+              ),
+            () => {},
+            controller.signal,
+          );
+          if (verified.excluded) throw new Error(t("newAccounts.invalidFile"));
+          for (const a of group) {
+            const remote = verified.accounts.find(
+              (r) => r.signup?.local_id === a.signup!.local_id,
+            );
+            if (remote) {
+              a.username = remote.username!;
+              a.global_id = remote.global_id;
+              a.bot = remote.bot ?? false;
+            }
+          }
+          if (current !== generation.current) return;
+        }
+        importRegistrations(cohort);
+        return;
+      }
       setCSV(parseCSV(text));
       setColumn(0);
-    } else if (file.name.toLowerCase().endsWith(".txt")) importText(text);
-    else throw new Error(t("errors.file"));
+    } else if (file.name.toLowerCase().endsWith(".txt")) {
+      const dates = cohortFileDates(file.name);
+      importText(text, dates ?? undefined);
+      if (dates) {
+        params({ title: t("newAccounts.cohortDates", dates) });
+        setNotice(t("newAccounts.txtImported", dates));
+      }
+    } else throw new Error(t("errors.file"));
   }
   function resetAnalysis() {
     generation.current++;
@@ -549,7 +677,9 @@ export default function App() {
                 <button disabled={busy} onClick={() => void perform(dashboard)}>
                   {t("importDashboard")}
                 </button>
-                <div className="divider" />
+              </section>
+              <NewAccountsImport onImport={importRegistrations} />
+              <section className="panel">
                 <h2>{t("archive")}</h2>
                 <FileInput
                   label={t("archive")}
@@ -647,14 +777,22 @@ export default function App() {
           <>
             <h1>{t("importedParticipants")}</h1>
             <p>{t("qualificationNote")}</p>
-            <p className="hint" role="status">{t(hasPendingExclusions ? "exclusionsPending" : "exclusionsHelp")}</p>
+            <p className="hint" role="status">
+              {t(hasPendingExclusions ? "exclusionsPending" : "exclusionsHelp")}
+            </p>
             <div className="actions">
-              <button disabled={busy || !hasPendingExclusions} onClick={applyExclusions}>
+              <button
+                disabled={busy || !hasPendingExclusions}
+                onClick={applyExclusions}
+              >
                 {t("applyExclusions")}
               </button>
               <span aria-hidden="true">→</span>
-              <button className="primary" disabled={busy || hasPendingExclusions}
-                onClick={() => void perform(qualify)}>
+              <button
+                className="primary"
+                disabled={busy || hasPendingExclusions}
+                onClick={() => void perform(qualify)}
+              >
                 {busy ? t("qualifying") : t("qualify")}
               </button>
               <button disabled={busy} onClick={() => update({ stage: 0 })}>
@@ -671,7 +809,7 @@ export default function App() {
             )}
             <div className="form-grid">
               <label>
-                {t("title")}
+                {t(s.new_accounts ? "newAccounts.cohortTitle" : "title")}
                 <input
                   value={s.params.title}
                   onChange={(e) => params({ title: e.target.value })}
@@ -701,9 +839,15 @@ export default function App() {
               accounts={s.cohort}
               start={s.params.start}
               pendingExclusions={pendingExclusions}
-              toggle={(name) => setPendingExclusions(previous => ({
-                ...previous, [name]: !(previous[name] ?? !s.cohort.find(a => a.username === name)!.included)
-              }))}
+              toggle={(name) =>
+                setPendingExclusions((previous) => ({
+                  ...previous,
+                  [name]: !(
+                    previous[name] ??
+                    !s.cohort.find((a) => a.username === name)!.included
+                  ),
+                }))
+              }
               reason={(name, value) =>
                 update({
                   cohort: s.cohort.map((a) =>
@@ -717,19 +861,33 @@ export default function App() {
         {s.stage === 2 && (
           <>
             <h1>{t("steps.1")}</h1>
-            <p>{t("collectionNotice")}</p>
-            {eventDates}
+            <p>
+              {t(
+                s.new_accounts
+                  ? "newAccounts.collectionNotice"
+                  : "collectionNotice",
+              )}
+            </p>
+            {s.new_accounts ? (
+              <p className="notice">
+                {t("newAccounts.cohortDates", s.new_accounts)}
+              </p>
+            ) : (
+              eventDates
+            )}
             {changed && <p className="notice">{t("errors.changed")}</p>}
             <div className="form-grid">
               <label>
-                {t("title")}
+                {t(s.new_accounts ? "newAccounts.cohortTitle" : "title")}
                 <input
                   value={s.params.title}
                   onChange={(e) => params({ title: e.target.value })}
                 />
               </label>
             </div>
-            <CreationSettings params={s.params} change={params} />
+            {!s.new_accounts && (
+              <CreationSettings params={s.params} change={params} />
+            )}
             <p role="status" className="selection-preview">
               {t("selectionPreview", {
                 selected: result.n,
@@ -740,51 +898,65 @@ export default function App() {
             </p>
             {result.n === 0 && <p className="notice">{t("zeroSelection")}</p>}
             <SelectionReview rows={result.rows} params={s.params} />
-            <label>
-              {t("scope")}
-              <select
-                value={s.params.scope}
-                onChange={(e) => {
-                  const scope = e.target.value as Params["scope"];
-                  params({
-                    scope,
-                    ...(scope === "custom" && !customScopeInitialized.current
-                      ? { projects: [] }
-                      : {}),
-                  });
-                  if (scope === "custom") customScopeInitialized.current = true;
-                }}
-              >
-                {["origin", "custom", "all"].map((k) => (
-                  <option key={k} value={k}>
-                    {t("scopes." + k)}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {s.params.scope === "origin" && projectPicker("origins")}
-            {s.params.scope === "custom" && (
-              <>
-                {!s.params.projects.length && (
-                  <p className="notice">{t("customScopeEmpty")}</p>
-                )}
-                {projectPicker("projects")}
-              </>
-            )}
-            {s.params.scope === "all" && (
-              <ProjectPicker
-                title="allCollectionProjects"
-                catalog={s.catalog}
-                selected={[...new Set(s.catalog.map((project) => project.id))]}
-                readOnly
-                help="allCollectionProjectsHelp"
-                change={() => {}}
-                retry={() =>
-                  void perform(async () =>
-                    update({ catalog: await api<Project[]>("projects") }),
-                  )
-                }
+            {s.new_accounts ? (
+              <ObservationSettings
+                session={s}
+                change={params}
+                question={(q) => update({ question: q })}
               />
+            ) : (
+              <>
+                <label>
+                  {t("scope")}
+                  <select
+                    value={s.params.scope}
+                    onChange={(e) => {
+                      const scope = e.target.value as Params["scope"];
+                      params({
+                        scope,
+                        ...(scope === "custom" &&
+                        !customScopeInitialized.current
+                          ? { projects: [] }
+                          : {}),
+                      });
+                      if (scope === "custom")
+                        customScopeInitialized.current = true;
+                    }}
+                  >
+                    {["origin", "custom", "all"].map((k) => (
+                      <option key={k} value={k}>
+                        {t("scopes." + k)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                {s.params.scope === "origin" && projectPicker("origins")}
+                {s.params.scope === "custom" && (
+                  <>
+                    {!s.params.projects.length && (
+                      <p className="notice">{t("customScopeEmpty")}</p>
+                    )}
+                    {projectPicker("projects")}
+                  </>
+                )}
+                {s.params.scope === "all" && (
+                  <ProjectPicker
+                    title="allCollectionProjects"
+                    catalog={s.catalog}
+                    selected={[
+                      ...new Set(s.catalog.map((project) => project.id)),
+                    ]}
+                    readOnly
+                    help="allCollectionProjectsHelp"
+                    change={() => {}}
+                    retry={() =>
+                      void perform(async () =>
+                        update({ catalog: await api<Project[]>("projects") }),
+                      )
+                    }
+                  />
+                )}
+              </>
             )}
             <fieldset>
               <legend>{t("automation")}</legend>
@@ -824,12 +996,20 @@ export default function App() {
           <>
             <h1>{t("steps.2")}</h1>
             <p>
-              {t("collectionParameters", {
-                start: s.params.start,
-                end: s.params.end,
-                scope: t("scopes." + s.params.scope),
-                selection: t("selections." + s.params.selection),
-              })}
+              {t(
+                s.new_accounts
+                  ? "newAccounts.collectionParameters"
+                  : "collectionParameters",
+                {
+                  start:
+                    s.params.observation?.mode === "period"
+                      ? s.params.observation.start
+                      : s.params.start,
+                  end: s.params.observation?.end ?? s.params.end,
+                  scope: t("scopes." + s.params.scope),
+                  selection: t("selections." + s.params.selection),
+                },
+              )}
             </p>
             <p className="hint">
               {t("categories")} :{" "}
@@ -905,6 +1085,7 @@ export default function App() {
                 session={s}
                 toggle={toggle}
                 setQuestion={(question) => update({ question })}
+                setParams={params}
                 recollect={() =>
                   update({
                     params: { ...s.params, scope: "all", reference: today() },
@@ -926,7 +1107,12 @@ export default function App() {
         )}
       </main>
       <footer>
-        <p><a href="https://meta.wikimedia.org/wiki/User:Mathieu_Denel_WMFr">Mathieu Denel WMFR</a> · {t("personalProject")}</p>
+        <p>
+          <a href="https://meta.wikimedia.org/wiki/User:Mathieu_Denel_WMFr">
+            Mathieu Denel WMFR
+          </a>{" "}
+          · {t("personalProject")}
+        </p>
         <p>{t("privacy")} · GPL-3.0-or-later</p>
       </footer>
       <dialog

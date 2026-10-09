@@ -116,6 +116,19 @@ export class Collector {
           if (remote) {
             const botPreviouslyKnown = a.bot;
             Object.assign(a, remote, { qualified: true });
+            if (a.signup) {
+              a.registration = a.signup.timestamp;
+              // CentralAuth dates from historical unification can be later.
+              // A significantly earlier global date indicates an old account.
+              if (
+                remote.registration &&
+                Date.parse(remote.registration) <
+                  Date.parse(a.signup.timestamp) - 60000
+              ) {
+                a.included = false;
+                a.exclusion_reason = i18n.t("newAccounts.existingGlobal");
+              }
+            }
             a.warnings = a.warnings.filter(
               (warning) => !isMessage(warning, "unqualified"),
             );
@@ -197,7 +210,7 @@ export class Collector {
       a.pre_complete = false;
       a.post_complete = false;
       a.technical = "pending";
-      if (p.scope === "all") {
+      if (p.scope === "all" && !p.observation) {
         tasks.push({
           provider: "xtools",
           usernames: [a.username],
@@ -208,15 +221,26 @@ export class Collector {
       try {
         const locals = await this.local(a.username);
         if (!a.included) continue;
-        for (const project of new Set([...locals, ...chosen]))
+        const targets = p.observation
+          ? locals.filter(
+              (id) =>
+                this.session.catalog.some((w) => w.id === id) &&
+                (p.scope === "all" || chosen.includes(id)),
+            )
+          : [...new Set([...locals, ...chosen])];
+        for (const project of targets)
           tasks.push({
             provider: "mediawiki",
             usernames: [a.username],
             project,
             attempts: 0,
-            ...(!chosen.includes(project) ? { end: p.end } : {}),
+            ...(!p.observation && !chosen.includes(project)
+              ? { end: p.end }
+              : {}),
           });
-        if (!locals.length && !chosen.length) {
+        if (
+          p.observation ? !targets.length : !locals.length && !chosen.length
+        ) {
           a.pre_complete = true;
           a.post_complete = true;
           a.technical = "completed_primary";
@@ -302,6 +326,12 @@ export class Collector {
   }
   async classifyProjects(edits: Edit[], accounts: Account[]) {
     for (const project of new Set(edits.map((edit) => edit.project))) {
+      if (
+        this.session.params.observation &&
+        this.session.catalog.find((w) => w.id === project)?.family !==
+          "wikipedia"
+      )
+        continue;
       const warning = i18n.t("collectionNamespaceUnavailable", {
         project: this.session.catalog.find((wiki) => wiki.id === project)!
           .domain,
@@ -349,9 +379,11 @@ export class Collector {
   }
   async run() {
     const p = this.session.params;
-    const start = new Date(dateMs(p.start) - p.pre_days * DAY)
-      .toISOString()
-      .slice(0, 10);
+    const start = p.observation
+      ? p.observation.mode === "period"
+        ? p.observation.start
+        : this.session.new_accounts!.start
+      : new Date(dateMs(p.start) - p.pre_days * DAY).toISOString().slice(0, 10);
     try {
       while (this.session.queue.length && !this.stopped) {
         await this.gate();
