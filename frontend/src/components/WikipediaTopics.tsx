@@ -6,6 +6,7 @@ import type { FollowupResult } from "../analysis/followup";
 import {
   articleEdits,
   articleKey,
+  creationType,
   summarizeArticles,
   type ArticleKind,
   type TopicMetric,
@@ -24,7 +25,7 @@ export function WikipediaTopics({
 }) {
   const { t, i18n } = useTranslation();
   const [open, setOpen] = useState(false);
-  const [kind, setKind] = useState<ArticleKind>("both");
+  const [kind, setKind] = useState<ArticleKind>("creation");
   const [metric, setMetric] = useState<TopicMetric>("contributors");
   const [detailed, setDetailed] = useState(false);
   const [cache, setCache] = useState(session.article_topics ?? {});
@@ -39,6 +40,12 @@ export function WikipediaTopics({
   const saveRef = useRef(save);
   saveRef.current = save;
   const edits = useMemo(() => articleEdits(result, session), [result, session]);
+  const candidates = edits.filter(
+    (edit) =>
+      !edit.deleted_page &&
+      (kind === "both" ||
+        creationType(edit, cache[articleKey(edit)]) !== (kind !== "creation")),
+  );
   const queryKey = edits.map((e) => e.project + ":" + e.revision).join("|");
   useEffect(() => {
     alive.current = true;
@@ -51,7 +58,7 @@ export function WikipediaTopics({
     controller.current?.abort();
     setRunning(false);
     setProgress(null);
-  }, [queryKey]);
+  }, [queryKey, kind]);
   const summary = useMemo(
     () => summarizeArticles(edits, cache, kind, metric, detailed),
     [edits, cache, kind, metric, detailed],
@@ -68,10 +75,11 @@ export function WikipediaTopics({
           { defaultValue: topic.split(".").at(-1)!.replaceAll("_", " ") },
         )
       : t("topics.groups." + topic);
-  const needsWork = edits.some(
+  const needsWork = candidates.some(
     (edit) =>
       !cache[articleKey(edit)] ||
-      cache[articleKey(edit)].status === "unavailable",
+      cache[articleKey(edit)].status === "unavailable" ||
+      (kind !== "creation" && cache[articleKey(edit)].model_skipped),
   );
   async function run() {
     setOpen(true);
@@ -79,18 +87,29 @@ export function WikipediaTopics({
     const abort = new AbortController();
     controller.current = abort;
     setRunning(true);
-    const articles = [
-      ...new Map(edits.map((e) => [articleKey(e), e])).entries(),
-    ];
+    const byArticle = new Map<string, (typeof candidates)[number]>();
+    for (const edit of candidates) {
+      const key = articleKey(edit);
+      const previous = byArticle.get(key);
+      if (!previous || edit.revision < previous.revision)
+        byArticle.set(key, edit);
+    }
+    const articles = [...byArticle.entries()];
     let done = articles.filter(
       ([key]) =>
-        values.current[key] && values.current[key].status !== "unavailable",
+        values.current[key] &&
+        values.current[key].status !== "unavailable" &&
+        !(kind !== "creation" && values.current[key].model_skipped),
     ).length;
     setProgress({ done, total: articles.length });
     try {
       for (const [key, edit] of articles) {
         if (abort.signal.aborted) break;
-        if (values.current[key] && values.current[key].status !== "unavailable")
+        if (
+          values.current[key] &&
+          values.current[key].status !== "unavailable" &&
+          !(kind !== "creation" && values.current[key].model_skipped)
+        )
           continue;
         let metadata: ArticleTopics;
         try {
@@ -102,6 +121,9 @@ export function WikipediaTopics({
                   project: edit.project,
                   title: edit.title,
                   page_id: edit.page_id,
+                  ...(kind === "creation" && typeof edit.new_page !== "boolean"
+                    ? { creation_revision: edit.revision }
+                    : {}),
                 },
                 abort.signal,
               ),
@@ -160,6 +182,36 @@ export function WikipediaTopics({
           {t("topics.modelLink")}
         </a>
       </details>
+      <div className="settings-grid">
+        <label>
+          <span id="topics-kind-label">{t("topics.kind")}</span>
+          <select
+            aria-labelledby="topics-kind-label"
+            value={kind}
+            onChange={(e) => setKind(e.target.value as ArticleKind)}
+          >
+            {(["both", "creation", "modification"] as const).map((v) => (
+              <option key={v} value={v}>
+                {t("topics.kinds." + v)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          <span id="topics-metric-label">{t("topics.metric")}</span>
+          <select
+            aria-labelledby="topics-metric-label"
+            value={metric}
+            onChange={(e) => setMetric(e.target.value as TopicMetric)}
+          >
+            {(["contributors", "articles", "edits"] as const).map((v) => (
+              <option key={v} value={v}>
+                {t("topics.metrics." + v)}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
       <div className="actions">
         <button
           className="primary"
@@ -206,36 +258,6 @@ export function WikipediaTopics({
             />
           )}
           <p className="hint">{t("topics.period")}</p>
-          <div className="settings-grid">
-            <label>
-              <span id="topics-kind-label">{t("topics.kind")}</span>
-              <select
-                aria-labelledby="topics-kind-label"
-                value={kind}
-                onChange={(e) => setKind(e.target.value as ArticleKind)}
-              >
-                {(["both", "creation", "modification"] as const).map((v) => (
-                  <option key={v} value={v}>
-                    {t("topics.kinds." + v)}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              <span id="topics-metric-label">{t("topics.metric")}</span>
-              <select
-                aria-labelledby="topics-metric-label"
-                value={metric}
-                onChange={(e) => setMetric(e.target.value as TopicMetric)}
-              >
-                {(["contributors", "articles", "edits"] as const).map((v) => (
-                  <option key={v} value={v}>
-                    {t("topics.metrics." + v)}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
           <p className="notice">
             {t("topics.answer", {
               contributors: number(summary.contributors),
@@ -304,6 +326,11 @@ export function WikipediaTopics({
           </p>
           {summary.unavailable > 0 && (
             <p className="notice">{t("topics.unavailable")}</p>
+          )}
+          {summary.deleted > 0 && (
+            <p className="hint">
+              {t("topics.deleted", { count: summary.deleted })}
+            </p>
           )}
           {summary.excluded > 0 && (
             <p className="hint">
@@ -384,6 +411,13 @@ export function WikipediaTopics({
                               unclassified_articles: summary.unclassified,
                               unavailable_articles: summary.unavailable,
                               pending_articles: summary.pending,
+                              deleted_articles_without_topic: summary.deleted,
+                              include_deleted_creations:
+                                result.question.include_deleted_creations !==
+                                false,
+                              include_deleted_modifications:
+                                result.question
+                                  .include_deleted_modifications !== false,
                             })),
                             { escapeFormulae: true },
                           ),

@@ -2,7 +2,12 @@
   "app": "Rétention Wikimédia",
   "tagline": "Comprendre les parcours après une action",
   "introText": "Suivez une cohorte dans le temps, sur ses projets d’origine et dans tout l’écosystème Wikimédia.",
-  "steps": ["Importer", "Paramétrer", "Collecter", "Résultats"],
+  "steps": [
+    "Importer",
+    "Paramétrer",
+    "Collecter",
+    "Résultats"
+  ],
   "skip": "Aller au contenu",
   "privacy": "Données publiques. Sans compte. Sans conservation de cohorte sur le serveur.",
   "clear": "Effacer les données de cette analyse",
@@ -222,7 +227,7 @@
     "Les taux utilisent les participants inclus et filtrés. Si un participant retenu a une collecte incomplète, les nombres observés restent visibles mais les taux définitifs sont indisponibles. Un échec n’est jamais compté comme une inactivité certaine. Les résultats n’établissent aucun lien causal entre formation et contributions ultérieures.",
     "La taxonomie s’appuie sur les noms canoniques des espaces de noms, leur famille et le projet précis. Les discussions relèvent de la communauté. Les fichiers Commons relèvent des médias. Les entités Wikidata relèvent des données structurées. Sur Wikisource, Page est du contenu et Index de la maintenance. Les règles sont documentées dans le fichier YAML.",
     "Les bots sont détectés à partir des groupes explicites globaux ou locaux, jamais à partir du nom. Les tags connus ou le marqueur bot permettent d’identifier certaines éditions automatisées. XTools ne fournit pas toujours ces marqueurs. L’absence de marqueur ne garantit pas une édition entièrement manuelle.",
-    "Le mode global dépend des révisions publiques et des projets pris en charge par les sources. Les révisions supprimées ou masquées et certains événements de journal ne sont pas accessibles. Les comptes locaux non rattachés au compte global, les renommages et le retard des répliques peuvent limiter la couverture. Le secours interroge les comptes locaux CentralAuth, sans parcourir tous les wikis inutilement.",
+    "Le mode global dépend des révisions publiques et des projets pris en charge par les sources. Les métadonnées publiques des révisions archivées d’articles Wikipédia sont recherchées séparément ; les données masquées restent inaccessibles. Les comptes locaux non rattachés, les renommages et le retard des répliques peuvent limiter la couverture.",
     "Les cohortes ne sont ni conservées dans une base distante ni enregistrées durablement par cette application. Les données restent en mémoire du navigateur. Les requêtes de vérification des comptes et de contributions passent par le backend sans journal de corps de requête ni nom d’utilisateur. L’export JSON est une sauvegarde volontaire. Le rapport PDF est agrégé par défaut.",
     "Nombre de personnes retenues ayant fait au moins une modification dans la période, par famille de projets. Une personne peut contribuer sur plusieurs projets. Les pourcentages utilisent tous les participants retenus et ne s’additionnent donc pas forcément à 100 %."
   ],
@@ -417,10 +422,30 @@
   "exclusionsPending": "Sélection non appliquée. Confirmez les exclusions avant de continuer.",
   "exclusionsHelp": "Cochez les comptes à exclure, puis appliquez la sélection avant de continuer.",
   "personalProject": "Projet personnel",
+  "contributorSort": {
+    "title": "Trier les contributeurs",
+    "contributions_desc": "Nombre de contributions : du plus élevé au plus faible",
+    "contributions_asc": "Nombre de contributions : du plus faible au plus élevé",
+    "last_desc": "Dernière contribution : de la plus récente à la plus ancienne",
+    "last_asc": "Dernière contribution : de la plus ancienne à la plus récente"
+  },
+  "deleted": {
+    "title": "Contributions sur des articles ensuite supprimés",
+    "includeCreations": "Inclure les créations d’articles ensuite supprimés",
+    "includeModifications": "Inclure les modifications sur des articles ensuite supprimés",
+    "help": "Ces données sont recherchées pendant la collecte sur les éditions de Wikipédia observées. Les cases recalculent immédiatement les résultats sans nouvel appel. Les modifications annulées sur un article existant restent comptées.",
+    "counts": "Avant ces exclusions, dans la période : créations supprimées ({{creations}}), modifications archivées ({{modifications}}).",
+    "unknown": "{{count}} contributions archivées n’ont pas encore pu être distinguées entre création et modification. Elles restent incluses si au moins une des deux cases est cochée.",
+    "incomplete": "La recherche des contributions archivées n’a pas pu être terminée pour {{count}} comptes. Les résultats qui les incluent restent un minimum.",
+    "classificationIncomplete": "La source des créations supprimées n’a pas répondu. Une exclusion séparée des créations ou des modifications ne permet pas encore de calculer un taux définitif.",
+    "oldArchive": "Cette analyse ne contient pas encore la collecte complémentaire des contributions archivées. Relancez la collecte pour les rechercher. Les cases agissent uniquement sur les données déjà récupérées.",
+    "revision": "Contribution archivée après suppression"
+  },
   "topics": {
-    "title": "Thématiques des articles Wikipédia, bêta",
+    "title": "Thématiques des articles créés sur Wikipédia, bêta",
+    "deleted": "Articles supprimés inclus : {{count}}, sans thématique disponible. Le modèle ne reçoit pas ces articles. Les deux cases d’inclusion s’appliquent aussi à ce bilan.",
     "partial": "La période ou la collecte n’est pas complète. Ce bilan décrit uniquement les contributions déjà observées.",
-    "intro": "Explorez les sujets des articles créés ou modifiés pendant la période choisie. Classement estimé par le modèle de Wikimédia outlink-topic-model.",
+    "intro": "Le classement présente les articles créés par défaut. Vous pouvez aussi choisir les articles modifiés. Le modèle de Wikimédia outlink-topic-model est appelé uniquement pour les articles accessibles de la sélection.",
     "methodTitle": "Comprendre le modèle",
     "method": "outlink-topic-model est le modèle multilingue de Wikimédia, accessible via Lift Wing. Il utilise fastText et les liens des articles reliés à Wikidata pour estimer 64 thèmes. Nous retenons les scores de confiance d’au moins 0,5.",
     "methodLimits": "Il classe l’article au moment de l’analyse, pas le texte ajouté. Les thèmes peuvent se recouper ou manquer. Le classement est indicatif ; les scores ne sont pas des pourcentages de contributions. Le JSON conserve ce classement pour le réutiliser.",
@@ -437,7 +462,7 @@
     "kinds": {
       "both": "Créations et modifications",
       "creation": "Créations",
-      "modification": "Modifications d’articles existants",
+      "modification": "Modifications d’articles",
       "unknown": "Type encore indéterminé"
     },
     "metric": "Mesure du classement",

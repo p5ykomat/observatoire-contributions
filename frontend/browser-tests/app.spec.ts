@@ -84,6 +84,10 @@ async function mocks(page: Page, delay = 0) {
       };
     else if (path === "/api/local-accounts")
       data = { merged: [{ wiki: "frwiki", editcount: 7 }] };
+    else if (path === "/api/deleted-contributions")
+      data = { contributions: [], cursor: null, unavailable: 0 };
+    else if (path === "/api/deleted-creations")
+      data = { revisions: [], cursor: null };
     else if (path === "/api/contributions")
       data = {
         contributions: body.usernames.map((username: string) => ({

@@ -39,6 +39,7 @@ export function Results({
   const [view, setView] = useState("contributing");
   const [page, setPage] = useState(0);
   const [detail, setDetail] = useState<string | null>(null);
+  const [sort, setSort] = useState("contributions_desc");
   const r = useMemo(() => analyzeFollowup(session), [session]);
   const q = r.question;
   const notices = resultNotices(session, r);
@@ -107,13 +108,32 @@ export function Results({
       {languageName(code)}
     </label>
   );
-  const filtered = r.rows.filter(
-    (row) =>
-      (view === "all" || (row.included && row.outcome === "contributing")) &&
-      row.account.username
-        .toLocaleLowerCase()
-        .includes(search.toLocaleLowerCase()),
-  );
+  const filtered = r.rows
+    .filter(
+      (row) =>
+        (view === "all" || (row.included && row.outcome === "contributing")) &&
+        row.account.username
+          .toLocaleLowerCase()
+          .includes(search.toLocaleLowerCase()),
+    )
+    .sort((a, b) => {
+      const name = a.account.username.localeCompare(
+        b.account.username,
+        i18n.resolvedLanguage,
+      );
+      if (sort.startsWith("contributions"))
+        return (
+          (sort.endsWith("desc")
+            ? b.edits.length - a.edits.length
+            : a.edits.length - b.edits.length) || name
+        );
+      if (!a.last || !b.last) return a.last ? -1 : b.last ? 1 : name;
+      return (
+        (sort === "last_desc"
+          ? b.last.localeCompare(a.last)
+          : a.last.localeCompare(b.last)) || name
+      );
+    });
   const totalPages = Math.max(1, Math.ceil(filtered.length / 25));
   const currentPage = Math.min(page, totalPages - 1);
   const outcome = (row: FollowupResult["rows"][number]) =>
@@ -306,6 +326,77 @@ export function Results({
             <p className="hint">{t("fup.otherCategories")}</p>
           </>
         )}
+        {r.projects.some((project) => project.family === "wikipedia") && (
+          <fieldset className="deleted-controls">
+            <legend>{t("deleted.title")}</legend>
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={q.include_deleted_creations !== false}
+                onChange={(event) =>
+                  change({ include_deleted_creations: event.target.checked })
+                }
+              />
+              {t("deleted.includeCreations")}
+            </label>
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={q.include_deleted_modifications !== false}
+                onChange={(event) =>
+                  change({
+                    include_deleted_modifications: event.target.checked,
+                  })
+                }
+              />
+              {t("deleted.includeModifications")}
+            </label>
+            <p className="hint">{t("deleted.help")}</p>
+            {r.deleted.collected ? (
+              <>
+                <p role="status">
+                  {t("deleted.counts", {
+                    creations: r.deleted.creations,
+                    modifications: r.deleted.modifications,
+                  })}
+                </p>
+                {r.deleted.unknown > 0 && (
+                  <p className="hint">
+                    {t("deleted.unknown", { count: r.deleted.unknown })}
+                  </p>
+                )}
+                {r.deleted.incomplete.length > 0 && (
+                  <div className="notice" role="status">
+                    <p>
+                      {t("deleted.incomplete", {
+                        count: r.deleted.incomplete.length,
+                      })}
+                    </p>
+                    <details>
+                      <summary>{t("fup.affectedAccounts")}</summary>
+                      <ul>
+                        {r.deleted.incomplete.map((name) => (
+                          <li key={name}>{name}</li>
+                        ))}
+                      </ul>
+                    </details>
+                    <button onClick={recollect}>{t("fup.recollect")}</button>
+                  </div>
+                )}
+                {r.deleted.unclassified.length > 0 && r.deleted.unknown > 0 && (
+                  <p className="hint">
+                    {t("deleted.classificationIncomplete")}
+                  </p>
+                )}
+              </>
+            ) : (
+              <div className="notice">
+                <p>{t("deleted.oldArchive")}</p>
+                <button onClick={recollect}>{t("fup.recollect")}</button>
+              </div>
+            )}
+          </fieldset>
+        )}
       </section>
       {!r.valid && <p className="notice">{t("fup.invalid")}</p>}
       {!r.enabled && <p className="notice">{t("fup.noProjects")}</p>}
@@ -441,10 +532,31 @@ export function Results({
           }))}
         />
       </div>
-      <WikipediaTopics session={session} result={r} save={saveTopics} />
       <section className="panel" aria-labelledby="contributor-list-title">
         <h2 id="contributor-list-title">{t("detail")}</h2>
         <p>{t("fup.tableHelp")}</p>
+        <label>
+          <span id="contributor-sort-label">{t("contributorSort.title")}</span>
+          <select
+            aria-labelledby="contributor-sort-label"
+            value={sort}
+            onChange={(event) => {
+              setSort(event.target.value);
+              setPage(0);
+            }}
+          >
+            {[
+              "contributions_desc",
+              "contributions_asc",
+              "last_desc",
+              "last_asc",
+            ].map((value) => (
+              <option key={value} value={value}>
+                {t("contributorSort." + value)}
+              </option>
+            ))}
+          </select>
+        </label>
         <label>
           {t("fup.listView")}
           <select
@@ -615,7 +727,14 @@ export function Results({
                                           project.id === edit.project,
                                       )?.domain ?? edit.project}
                                     </span>
-                                    <span>{edit.title}</span>
+                                    <span>
+                                      {edit.title}
+                                      {edit.deleted_page && (
+                                        <small className="category-example">
+                                          {t("deleted.revision")}
+                                        </small>
+                                      )}
+                                    </span>
                                   </li>
                                 ))}
                             </ul>
@@ -649,6 +768,7 @@ export function Results({
         </div>
         <p className="hint">{t("fup.renameHelp")}</p>
       </section>
+      <WikipediaTopics session={session} result={r} save={saveTopics} />
       <section className="panel">
         <h2>{t("exports")}</h2>
         <p>{t("fup.exportHelp")}</p>

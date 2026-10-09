@@ -12,6 +12,7 @@ from backend.providers.article_topics import ArticleRequest, ArticleTopicsProvid
 from backend.providers.catalog import CatalogProvider
 from backend.providers.centralauth import CentralAuthProvider
 from backend.providers.dashboard import DashboardProvider
+from backend.providers.deleted_contributions import DeletedContributionsProvider
 from backend.providers.mediawiki import MediaWikiContributionsProvider
 from backend.providers.new_accounts import (
     NewAccountsProvider,
@@ -153,6 +154,18 @@ async def contributions(body: PageRequest, request: Request):
 async def article_topics(body: ArticleRequest, request: Request):
     transport, catalog = providers(request)
     return await ArticleTopicsProvider(transport, catalog).article(body)
+
+
+@app.post("/api/deleted-contributions")
+async def deleted_contributions(body: PageRequest, request: Request):
+    transport, catalog = providers(request)
+    return await DeletedContributionsProvider(transport, catalog).page(body)
+
+
+@app.post("/api/deleted-creations")
+async def deleted_creations(body: PageRequest, request: Request):
+    transport, catalog = providers(request)
+    return await DeletedContributionsProvider(transport, catalog).creations(body)
 
 
 @app.post("/api/global-contributions")

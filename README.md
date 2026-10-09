@@ -36,11 +36,19 @@ Every log page is followed and accounts are verified in batches of 50. Pause and
 
 ## Understanding the results
 
+The contributor list appears above article topics and can be sorted by contribution count or last contribution date in either direction.
+
+Collection automatically retrieves public metadata for Wikipedia article creations and edits that were subsequently deleted. Two result checkboxes are enabled by default. Toggling them separately recalculates counts, percentages, lists and charts without additional requests. Reverted edits on articles that still exist remain counted independently of these checkboxes.
+
+The observation interval applies to edit timestamps. Deleted status means the revision was archived when collected. Hidden metadata remains inaccessible. Unavailable sources or uncertain creation types are reported rather than treated as inactivity. Older JSON analyses remain readable; collect again to retrieve their deleted contributions. JSON preserves archive metadata, filters and resume cursors.
+
 In the results, **Analyse article topics** starts optional analysis of Wikipedia’s main namespace. Wikimedia’s multilingual [`outlink-topic-model`](https://meta.wikimedia.org/wiki/Machine_learning_models/Production/Language_agnostic_link-based_article_topic), served by Lift Wing, uses article links to estimate topics. Scores of at least 0.5 are retained. Topics concern the current article, not the text added or the historical version. Redirects, disambiguations and currently inaccessible pages are excluded.
 
-Choose creations, edits or both, then contributors, distinct articles or contributions. Counts and percentages show their denominator. Topics are grouped into eight broad themes, plus any unknown themes; subtopics are optional. Units may appear in several topics, so percentages can sum to more than 100%. Model confidence scores are never treated as contribution percentages. Classification is beta and can be incorrect.
+Choose creations (the default), edits or both, then contributors, distinct articles or contributions. Counts and percentages show their denominator. Topics are grouped into eight broad themes, plus any unknown themes; subtopics are optional. Units may appear in several topics, so percentages can sum to more than 100%. Model confidence scores are never treated as contribution percentages. Classification is beta and can be incorrect.
 
 Coverage distinguishes classified articles, articles with no recognised topic, unavailable sources and articles still to examine. Analysis follows the result filters and runs only on request, separately from contribution collection. Pause and resume preserve examined articles in the page; JSON preserves them after a pause or at completion. Topic CSV includes the measure, filter, denominator, period and model. A short explanation and the official model card are directly accessible in the interface.
+
+Included deleted articles remain in the denominators without an assigned topic. The model receives neither deleted text nor an unrelated page recreated under the same title. Excluding them also recalculates topic percentages. By default, model inference covers accessible article creations. Public archived revision metadata comes from `alldeletedrevisions`; XTools Pages Created identifies creations.
 
 The main question is: **how many participants made at least one edit after the event?**
 

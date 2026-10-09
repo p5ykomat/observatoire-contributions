@@ -73,6 +73,7 @@ class Contribution(BaseModel):
     title: str = ""
     page_id: int | None = None
     new_page: bool | None = None
+    deleted_page: bool = False
     category: Literal[
         "CONTENT", "STRUCTURED_DATA", "MEDIA", "MAINTENANCE", "COMMUNITY", "OTHER"
     ] = "OTHER"

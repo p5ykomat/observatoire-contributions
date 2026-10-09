@@ -88,6 +88,18 @@ async def test_non_wikipedia_refused():
     transport.get.assert_not_awaited()
 
 
+async def test_creation_only_does_not_call_model_for_an_existing_article():
+    p, transport = provider(
+        {"pageid": 42, "title": "Article", "ns": 0, "revisions": [{"revid": 1, "parentid": 0}]}
+    )
+    result = await p.article(ArticleRequest(project="frwiki", title="Article", creation_revision=2))
+    assert result["first_revision"] == 1 and result["model_skipped"] is True
+    transport.post.assert_not_awaited()
+    result = await p.article(ArticleRequest(project="frwiki", title="Article", creation_revision=1))
+    assert result["status"] == "classified"
+    transport.post.assert_awaited_once()
+
+
 async def test_liftwing_post_honours_retry_after():
     def handler(request):
         assert request.method == "POST"

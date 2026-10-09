@@ -2,7 +2,12 @@
   "app": "Wikimedia Retention",
   "tagline": "Understand contribution paths after an event",
   "introText": "Follow a cohort over time, on its original projects and across the Wikimedia ecosystem.",
-  "steps": ["Import", "Settings", "Collect", "Results"],
+  "steps": [
+    "Import",
+    "Settings",
+    "Collect",
+    "Results"
+  ],
   "skip": "Skip to content",
   "privacy": "Public data. No account required. No cohorts stored on the server.",
   "clear": "Clear this analysis",
@@ -222,7 +227,7 @@
     "Rates use included and filtered participants. If an included participant has incomplete collection, observed counts remain visible but final rates are unavailable. A failure is never treated as certain inactivity. Results do not establish a causal link between training and later contributions.",
     "The taxonomy uses canonical namespace names, their family and the specific project. Talk pages belong to community. Commons files belong to media. Wikidata entities belong to structured data. On Wikisource, Page is content and Index is maintenance. Rules are documented in the YAML file.",
     "Bots are detected from explicit global or local groups, never from usernames. Known tags or the bot flag identify some automated edits. XTools does not always provide these markers. A missing marker does not guarantee a fully manual edit.",
-    "Global mode depends on public revisions and projects supported by the sources. Deleted or hidden revisions and some log events are inaccessible. Local accounts not attached to the global account, renames and replica lag can limit coverage. The fallback queries local CentralAuth accounts without unnecessarily scanning every wiki.",
+    "Global collection depends on public revisions and supported projects. Public archived revision metadata for Wikipedia articles is collected separately; hidden data remains inaccessible. Unattached local accounts, renames and replica lag may limit coverage.",
     "Cohorts are not stored in a remote database or saved permanently by this application. Data stays in browser memory. Account verification and contribution requests pass through the backend without logging request bodies or usernames. Exporting JSON is a voluntary backup. PDF reports are aggregated by default.",
     "Included people who made at least one edit in the period, by project family. A person may contribute on several projects. Percentages use all included participants, so they may add up to more than 100%."
   ],
@@ -417,10 +422,30 @@
   "exclusionsPending": "Selection not applied. Confirm exclusions before continuing.",
   "exclusionsHelp": "Select accounts to exclude, then apply the selection before continuing.",
   "personalProject": "Personal project",
+  "contributorSort": {
+    "title": "Sort contributors",
+    "contributions_desc": "Contribution count: highest to lowest",
+    "contributions_asc": "Contribution count: lowest to highest",
+    "last_desc": "Last contribution: newest to oldest",
+    "last_asc": "Last contribution: oldest to newest"
+  },
+  "deleted": {
+    "title": "Contributions to subsequently deleted articles",
+    "includeCreations": "Include creations of subsequently deleted articles",
+    "includeModifications": "Include edits to subsequently deleted articles",
+    "help": "These records are searched during collection on the observed Wikipedia editions. The checkboxes immediately recalculate results without new requests. Reverted edits on existing articles remain counted.",
+    "counts": "In the period, before these exclusions: {{creations}} deleted creations and {{modifications}} archived edits retrieved.",
+    "unknown": "{{count}} archived contributions could not yet be identified as creations or edits. They remain included while at least one checkbox is selected.",
+    "incomplete": "Archived contribution collection could not finish for {{count}} accounts. Results including them remain a minimum.",
+    "classificationIncomplete": "The deleted creation source did not respond. Separately excluding creations or edits cannot yet provide a definitive rate.",
+    "oldArchive": "This analysis does not yet contain the additional archived contribution collection. Restart collection to retrieve it. The checkboxes only affect records already retrieved.",
+    "revision": "Contribution archived after deletion"
+  },
   "topics": {
-    "title": "Wikipedia article topics, beta",
+    "title": "Topics of articles created on Wikipedia, beta",
+    "deleted": "{{count}} deleted articles are included in the counts without an available topic. These articles are not sent to the model. Their contributions follow the two inclusion checkboxes in the results.",
     "partial": "The period or collection is incomplete. These statistics describe only the contributions already observed.",
-    "intro": "Explore the subjects of articles created or edited in the selected period. Topics are estimated by Wikimedia’s outlink-topic-model.",
+    "intro": "Created articles are shown by default. You can also select edited articles. Wikimedia’s outlink-topic-model is only called for accessible articles in the selection.",
     "methodTitle": "Understand the model",
     "method": "outlink-topic-model is Wikimedia’s multilingual model, available through Lift Wing. It uses fastText and article links mapped to Wikidata to estimate 64 topics. We retain confidence scores of at least 0.5.",
     "methodLimits": "It classifies the article at analysis time, not the text added. Topics may overlap or be missing. Classification is indicative; scores are not percentages of contributions. JSON preserves the classification for reuse.",
@@ -437,7 +462,7 @@
     "kinds": {
       "both": "Creations and edits",
       "creation": "Creations",
-      "modification": "Edits to existing articles",
+      "modification": "Edits to articles",
       "unknown": "Type not yet determined"
     },
     "metric": "Ranking measure",

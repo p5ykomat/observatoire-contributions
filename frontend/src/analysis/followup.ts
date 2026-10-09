@@ -4,8 +4,27 @@ import { isMessage } from "../i18n";
 
 export const wikipediaLanguage = (project: Project) =>
   project.domain.split(".")[0];
+export function includesDeleted(
+  edit: Session["edits"][number],
+  q: Session["question"],
+) {
+  if (!edit.deleted_page) return true;
+  const creations = q?.include_deleted_creations !== false;
+  const modifications = q?.include_deleted_modifications !== false;
+  return edit.new_page === true
+    ? creations
+    : edit.new_page === false
+      ? modifications
+      : creations || modifications;
+}
 export function analyzeFollowup(s: Session) {
-  const q = s.question ?? defaultQuestion();
+  const q = {
+    ...defaultQuestion(),
+    ...s.question,
+    include_deleted_creations: s.question?.include_deleted_creations !== false,
+    include_deleted_modifications:
+      s.question?.include_deleted_modifications !== false,
+  };
   const observation = s.params.observation;
   const startMs = observation
     ? dateMs(
@@ -92,6 +111,19 @@ export function analyzeFollowup(s: Session) {
           })
           .sort((a, b) => a.timestamp.localeCompare(b.timestamp))
       : [];
+    const selectedEdits = edits.filter((edit) => includesDeleted(edit, q));
+    const deletedNeeded =
+      projects.some((project) => project.family === "wikipedia") &&
+      q.wikipedia_categories.includes("CONTENT") &&
+      (q.include_deleted_creations !== false ||
+        q.include_deleted_modifications !== false);
+    const deletedCovered =
+      !deletedNeeded ||
+      !s.deleted_collection_version ||
+      (account.deleted_complete === true &&
+        ((q.include_deleted_creations !== false &&
+          q.include_deleted_modifications !== false) ||
+          account.deleted_classified === true));
     const complete =
       valid &&
       enabled &&
@@ -99,8 +131,9 @@ export function analyzeFollowup(s: Session) {
       scopeCovered &&
       sameScope &&
       account.post_complete &&
-      account.exists === true;
-    const outcome = edits.length
+      account.exists === true &&
+      deletedCovered;
+    const outcome = selectedEdits.length
       ? "contributing"
       : complete
         ? "not_contributing"
@@ -108,11 +141,13 @@ export function analyzeFollowup(s: Session) {
     return {
       account,
       included,
-      edits,
+      edits: selectedEdits,
+      deletedEdits: edits.filter((edit) => edit.deleted_page),
+      deletedCovered,
       complete,
       outcome,
-      last: edits.at(-1)?.timestamp ?? null,
-      projects: [...new Set(edits.map((edit) => edit.project))],
+      last: selectedEdits.at(-1)?.timestamp ?? null,
+      projects: [...new Set(selectedEdits.map((edit) => edit.project))],
     };
   });
   const included = rows.filter((row) => row.included);
@@ -231,6 +266,30 @@ export function analyzeFollowup(s: Session) {
     totalEdits: included.reduce((sum, row) => sum + row.edits.length, 0),
     byFamily,
     projects,
+    deleted: {
+      collected: s.deleted_collection_version === 1 && sameScope,
+      incomplete: included
+        .filter((row) => row.account.deleted_complete !== true)
+        .map((row) => row.account.username),
+      unclassified: included
+        .filter((row) => row.account.deleted_classified !== true)
+        .map((row) => row.account.username),
+      creations: included.reduce(
+        (sum, row) =>
+          sum + row.deletedEdits.filter((e) => e.new_page === true).length,
+        0,
+      ),
+      modifications: included.reduce(
+        (sum, row) =>
+          sum + row.deletedEdits.filter((e) => e.new_page === false).length,
+        0,
+      ),
+      unknown: included.reduce(
+        (sum, row) =>
+          sum + row.deletedEdits.filter((e) => e.new_page == null).length,
+        0,
+      ),
+    },
   };
 }
 export type FollowupResult = ReturnType<typeof analyzeFollowup>;
