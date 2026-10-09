@@ -2,12 +2,7 @@
   "app": "Wikimedia Retention",
   "tagline": "Understand contribution paths after an event",
   "introText": "Follow a cohort over time, on its original projects and across the Wikimedia ecosystem.",
-  "steps": [
-    "Import",
-    "Settings",
-    "Collect",
-    "Results"
-  ],
+  "steps": ["Import", "Settings", "Collect", "Results"],
   "skip": "Skip to content",
   "privacy": "Public data. No account required. No cohorts stored on the server.",
   "clear": "Clear this analysis",
@@ -464,7 +459,7 @@
     "observedTo": "Contributions through",
     "projects": "3. Choose observed projects",
     "scope": {
-      "preset": "Quick selection, editable",
+      "preset": "Quick and editable selection",
       "all": "All Wikimedia projects, all languages",
       "custom": "Custom selection by project and language"
     },
@@ -473,8 +468,13 @@
       "enwiki": "English Wikipedia",
       "dewiki": "German Wikipedia",
       "commonswiki": "Commons",
-      "wikidatawiki": "Wikidata"
+      "wikidatawiki": "Wikidata",
+      "frwiktionary": "French Wiktionary",
+      "frwikisource": "French Wikisource"
     },
+    "automationHelp": "Accounts identified as bots are excluded by default. This checkbox, enabled by default, also excludes edits flagged as bot or automated made by other accounts.",
+    "preparationProgress": "Finding contribution projects: {{done}} of {{total}} accounts examined.",
+    "progressRefresh": "Counters refresh every two seconds. A public source request may take longer.",
     "allProjects": "{{count}} public catalogue projects will be observed, across all their languages. Only projects where the account has contributions are queried.",
     "resultTitle": "How many new accounts contributed?",
     "reportTitle": "Observation report",

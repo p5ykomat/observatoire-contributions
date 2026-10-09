@@ -8,6 +8,8 @@ export const PRESET_PROJECTS = [
   "dewiki",
   "commonswiki",
   "wikidatawiki",
+  "frwiktionary",
+  "frwikisource",
 ];
 export interface Candidate {
   name: string;

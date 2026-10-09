@@ -2,7 +2,7 @@ import { lazy, Suspense, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api, retry } from "./api";
 import { isMessage, translateMessage } from "./i18n";
-import { Collector } from "./collector";
+import { Collector, type CollectionPreparation } from "./collector";
 import {
   importArchive,
   importNames,
@@ -59,7 +59,10 @@ export default function App() {
       end: string;
     } | null>(null),
     [dateChoice, setDateChoice] = useState<"" | "provided" | "custom">(""),
-    [paused, setPaused] = useState(false);
+    [paused, setPaused] = useState(false),
+    [preparation, setPreparation] = useState<CollectionPreparation | null>(
+      null,
+    );
   const collector = useRef<Collector | null>(null);
   const generation = useRef(0);
   const customScopeInitialized = useRef(false);
@@ -140,6 +143,7 @@ export default function App() {
         scope: "custom",
         projects: [...PRESET_PROJECTS],
         selection: "all",
+        exclude_automation: true,
         pre_days: 1,
         observation: { mode: "registration", start: data.start, end: today() },
       },
@@ -229,14 +233,26 @@ export default function App() {
     session.stage = 3;
     session.params.reference = session.params.observation?.end ?? today();
     const current = generation.current;
-    const engine = new Collector(session, (value) => {
-      if (current === generation.current) setS(value);
+    const engine = new Collector(session, (value, progress) => {
+      if (current === generation.current) {
+        setS(value);
+        setPreparation(progress);
+      }
     });
     collector.current = engine;
     setPaused(false);
+    setNotice("");
     engine.emit();
-    await engine.prepare(recollect);
-    await engine.run();
+    // Rendering progress must not depend on a public API request finishing.
+    // This refresh uses local state only and never adds network requests.
+    const refresh = setInterval(() => engine.emit(), 2000);
+    try {
+      await engine.prepare(recollect);
+      await engine.run();
+    } finally {
+      clearInterval(refresh);
+      if (current === generation.current) setPreparation(null);
+    }
   }
   const [pendingExclusions, setPendingExclusions] = useState<
     Record<string, boolean>
@@ -960,7 +976,13 @@ export default function App() {
             )}
             <fieldset>
               <legend>{t("automation")}</legend>
-              <p className="hint">{t("resultsFiltersHelp")}</p>
+              <p className="hint">
+                {t(
+                  s.new_accounts
+                    ? "newAccounts.automationHelp"
+                    : "resultsFiltersHelp",
+                )}
+              </p>
               <label className="check">
                 <input
                   type="checkbox"
@@ -1022,11 +1044,18 @@ export default function App() {
               })}
             </p>
             <p role="status">
+              {preparation && (
+                <>
+                  {t("newAccounts.preparationProgress", { ...preparation })}
+                  <br />
+                </>
+              )}
               {t("progress", {
                 done: processedAccounts,
                 total: retainedAccounts.length,
               })}
             </p>
+            <p className="hint">{t("newAccounts.progressRefresh")}</p>
             <progress
               aria-label={t("steps.2")}
               max={retainedAccounts.length}

@@ -9,6 +9,7 @@ const projects = [
   ["commonswiki", "commons.wikimedia.org", "commons"],
   ["wikidatawiki", "www.wikidata.org", "wikidata"],
   ["frwikisource", "fr.wikisource.org", "wikisource"],
+  ["frwiktionary", "fr.wiktionary.org", "wiktionary"],
 ].map(([id, domain, family]) => ({ id, domain, label: domain, family }));
 
 async function mocks(page: Page) {
@@ -144,7 +145,11 @@ test("complete registration flow, Commons only, zero edits, textual report and a
   await expect(
     page.getByText("Date de fin de l’action", { exact: true }),
   ).toHaveCount(0);
-  await page.getByLabel("Sur une plage de dates après l’inscription de chaque compte", { exact: true }).check();
+  await page
+    .getByLabel("Sur une plage de dates après l’inscription de chaque compte", {
+      exact: true,
+    })
+    .check();
   await page
     .getByLabel("Contributions à partir du", { exact: true })
     .fill("2026-03-01");
@@ -152,10 +157,12 @@ test("complete registration flow, Commons only, zero edits, textual report and a
     .getByLabel("Contributions jusqu’au", { exact: true })
     .fill("2026-03-30");
   for (const label of [
-    "Wikipédia en français",
-    "Wikipédia en anglais",
-    "Wikipédia en allemand",
+    "Wikipédia francophone",
+    "Wikipédia anglophone",
+    "Wikipédia germanophone",
     "Wikidata",
+    "Wiktionnaire francophone",
+    "Wikisource francophone",
   ]) {
     const checkbox = page.getByRole("checkbox", { name: label, exact: true });
     await expect(checkbox).toBeChecked();
@@ -193,15 +200,17 @@ test("all projects and all languages, custom Wikisource selection, keyboard and 
   await mocks(page);
   await importAccounts(page);
   await page
-    .getByLabel("Tous les projets Wikimédia, toutes les langues", {
+    .getByLabel("Tous les projets Wikimédia dans toutes les langues", {
       exact: true,
     })
     .check();
   await expect(
-    page.getByText(/6 projets publics du catalogue seront observés/),
+    page.getByText(/7 projets publics du catalogue seront observés/),
   ).toBeVisible();
   await page
-    .getByLabel("Sélection personnalisée par projet et langue", { exact: true })
+    .getByLabel("Sélection personnalisée par projet et par langue", {
+      exact: true,
+    })
     .check();
   await page
     .getByRole("textbox", { name: "Rechercher un projet" })
@@ -226,9 +235,19 @@ test("all projects and all languages, custom Wikisource selection, keyboard and 
     fullPage: true,
   });
   await page.setViewportSize({ width: 320, height: 800 });
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await page.evaluate(() => { document.documentElement.style.fontSize = "200%"; });
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.evaluate(() => {
+    document.documentElement.style.fontSize = "200%";
+  });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
 });
 
 test("saved cohort CSV imports through the main file input without querying the registration log again", async ({
@@ -282,7 +301,11 @@ test("saved cohort CSV imports through the main file input without querying the 
       { exact: true },
     ),
   ).toBeVisible();
-  await page.getByLabel("Sur une plage de dates après l’inscription de chaque compte", { exact: true }).check();
+  await page
+    .getByLabel("Sur une plage de dates après l’inscription de chaque compte", {
+      exact: true,
+    })
+    .check();
   await page
     .getByLabel("Contributions à partir du", { exact: true })
     .fill("2026-03-01");
@@ -296,4 +319,71 @@ test("saved cohort CSV imports through the main file input without querying the 
     page.getByRole("heading", { name: "Bilan de l’observation" }),
   ).toBeVisible();
   expect(logRequests).toHaveLength(requestsBefore);
+});
+
+test("collection updates during project discovery without pausing or repeating API calls", async ({
+  page,
+}) => {
+  await mocks(page);
+  await importAccounts(page);
+  for (const name of ["Wiktionnaire francophone", "Wikisource francophone"]) {
+    await expect(
+      page.getByRole("checkbox", { name, exact: true }),
+    ).toBeChecked();
+  }
+  await expect(
+    page.getByRole("checkbox", {
+      name: "Exclure les éditions marquées bot ou automatisées",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("checkbox", {
+      name: "Exclure les éditions marquées bot ou automatisées",
+      exact: true,
+    }),
+  ).toBeChecked();
+  let release = () => {};
+  const blocked = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const calls: string[] = [];
+  await page.route("**/api/local-accounts", async (route) => {
+    const name = route.request().postDataJSON().usernames[0];
+    calls.push(name);
+    if (name === "NoEdits") await blocked;
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({ merged: [] }),
+    });
+  });
+  try {
+    await page
+      .getByRole("button", { name: "Lancer la collecte", exact: true })
+      .click();
+    await expect(
+      page.getByRole("heading", { name: "Collecter", exact: true }),
+    ).toBeVisible();
+    await expect(page.getByText(/Vérification terminée/)).toHaveCount(0);
+    await expect(
+      page.getByText(
+        /Recherche des projets de contribution : 1 sur 2 comptes examinés/,
+      ),
+    ).toBeVisible({ timeout: 7000 });
+    await expect(
+      page.getByRole("progressbar", { name: "Collecter", exact: true }),
+    ).toHaveAttribute("value", "1");
+    expect(calls).toEqual(["NewRegistered", "NoEdits"]);
+    await page.screenshot({
+      path: "../output/new-accounts-progress.png",
+      fullPage: true,
+    });
+  } finally {
+    release();
+  }
+  await expect(
+    page.getByRole("heading", { name: "Bilan de l’observation" }),
+  ).toBeVisible();
+  await expect(page.getByText(/Vérification terminée/)).toHaveCount(0);
+  expect(calls).toHaveLength(2);
 });

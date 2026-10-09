@@ -24,7 +24,9 @@ The fourth import source loads a single registration day or an inclusive date ra
 
 The supported format starts on **18 April 2006**, the first full UTC day after `create` appeared on French Wikipedia. Older entries exist from September 2005 but are not supported. Later CentralAuth unification dates do not replace local signup dates. Earlier global registration dates reveal pre-existing accounts. Hidden entries and unavailable accounts are reported outside the analysable cohort.
 
-Observe each account from its own signup until a chosen date, or during a specific interval. The editable preset selects French, English and German Wikipedia, Commons and Wikidata. Alternatively select all public projects in every language, or projects by family and language. Contribution type filters apply only to Wikipedia. Other projects count all public revisions, which are not a complete inventory of uploads or log actions.
+Observe each account from its own signup until a chosen date, or during a date range after signup. The editable preset selects French, English and German Wikipedia, Commons, Wikidata, French Wiktionary and French Wikisource. Alternatively select all public projects in every language, or projects by family and language. Contribution type filters apply only to Wikipedia. Other projects count all public revisions, which are not a complete inventory of uploads or log actions.
+
+Accounts identified as bots are excluded by default. The checkbox excluding edits flagged as bot or automated is visible and enabled by default in this flow. Collection counters refresh every two seconds without additional network requests. Discovering the projects where accounts contribute is shown separately from the number of fully processed accounts.
 
 Text reports, charts and exports use the same criteria. Accounts with zero edits stay in the denominator. Accounts contributing to several projects count once overall. At least one edit during an interval does not establish continuous activity or retention on the deadline itself.
 

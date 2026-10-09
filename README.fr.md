@@ -24,7 +24,9 @@ La quatrième source d’import charge les comptes créés un jour précis ou en
 
 Le format pris en charge commence le **18 avril 2006**, premier jour UTC complet après l’apparition de l’action `create` dans le journal de Wikipédia en français. Des entrées plus anciennes existent depuis septembre 2005, mais leur format n’est pas pris en charge. Les dates d’unification CentralAuth, parfois postérieures à l’inscription locale, ne remplacent pas la date du journal. Une date globale antérieure à l’inscription locale révèle un compte déjà existant. Les entrées masquées ou les comptes introuvables sont signalés et restent hors du groupe analysable.
 
-Après import, choisissez l’observation depuis l’inscription propre à chaque compte jusqu’à une date, ou pendant une période précise. La sélection rapide propose Wikipédia en français, anglais et allemand, Commons et Wikidata. Chaque projet peut être décoché. Les autres modes couvrent tous les projets publics et toutes les langues, ou une sélection par famille et langue.
+Après import, choisissez l’observation depuis l’inscription propre à chaque compte jusqu’à une date, ou sur une plage de dates après son inscription. La sélection rapide propose Wikipédia francophone, anglophone et germanophone, Commons, Wikidata, Wiktionnaire francophone et Wikisource francophone. Chaque projet peut être décoché. Les autres modes couvrent tous les projets publics et toutes les langues, ou une sélection par famille et langue.
+
+Les comptes identifiés comme bots sont exclus par défaut. La case d’exclusion des modifications marquées bot ou automatisées est visible et cochée par défaut dans ce parcours. Les compteurs de collecte sont actualisés toutes les deux secondes, sans requête supplémentaire. La recherche des projets où les comptes contribuent est affichée séparément du nombre de comptes entièrement traités.
 
 Les types de pages choisis filtrent uniquement Wikipédia. Tous les types de révisions publiques des autres projets sont pris en compte. Une contribution est une révision publique, y compris sur Commons, et non chaque opération de téléversement ou chaque entrée de journal.
 

@@ -1043,7 +1043,7 @@ test("anglais et retour français conservent l’analyse, ses totaux et ses appe
   ).toBeVisible();
   await expect(
     page.getByRole("status").filter({ hasText: "Verification complete." }),
-  ).toBeVisible();
+  ).toHaveCount(0);
   await page
     .getByRole("combobox", { name: "Show", exact: true })
     .selectOption("all");

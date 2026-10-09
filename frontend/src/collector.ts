@@ -31,11 +31,16 @@ interface XTEdit {
   namespace: number;
   page_title: string;
 }
-type Publish = (s: Session) => void;
+export interface CollectionPreparation {
+  done: number;
+  total: number;
+}
+type Publish = (s: Session, preparation: CollectionPreparation | null) => void;
 export class Collector {
   paused = false;
   stopped = false;
   controller = new AbortController();
+  preparation: CollectionPreparation | null = null;
   private editKeys: Set<string>;
   constructor(
     public session: Session,
@@ -46,14 +51,17 @@ export class Collector {
     );
   }
   emit() {
-    this.publish({
-      ...this.session,
-      cohort: this.session.cohort.map((a) => ({ ...a })),
-      edits: [...this.session.edits],
-      queue: [...this.session.queue],
-      namespaces: { ...this.session.namespaces },
-      diagnostics: [...this.session.diagnostics],
-    });
+    this.publish(
+      {
+        ...this.session,
+        cohort: this.session.cohort.map((a) => ({ ...a })),
+        edits: [...this.session.edits],
+        queue: [...this.session.queue],
+        namespaces: { ...this.session.namespaces },
+        diagnostics: [...this.session.diagnostics],
+      },
+      this.preparation ? { ...this.preparation } : null,
+    );
   }
   pause() {
     this.paused = true;
@@ -195,7 +203,10 @@ export class Collector {
     const queued = new Set(resumed.flatMap((task) => task.usernames));
     const tasks: Task[] = [];
     const chosen = p.scope === "origin" ? p.origins : p.projects;
-    for (const a of retained) {
+    this.preparation = { done: 0, total: retained.length };
+    this.emit();
+    for (const [index, a] of retained.entries()) {
+      this.preparation = { done: index, total: retained.length };
       if (
         (sameScope && a.pre_complete && a.post_complete) ||
         queued.has(a.username)
@@ -219,8 +230,10 @@ export class Collector {
         continue;
       }
       try {
+        a.technical = "running";
         const locals = await this.local(a.username);
         if (!a.included) continue;
+        a.technical = "pending";
         const targets = p.observation
           ? locals.filter(
               (id) =>
@@ -270,6 +283,7 @@ export class Collector {
     this.session.queue = [...resumed, ...batches];
     this.session.collection_signature = signature(p);
     this.session.generated_at = new Date().toISOString();
+    this.preparation = null;
     this.emit();
   }
   async namespaces(project: string) {

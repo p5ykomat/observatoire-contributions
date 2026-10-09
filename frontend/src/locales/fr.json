@@ -2,12 +2,7 @@
   "app": "Rétention Wikimédia",
   "tagline": "Comprendre les parcours après une action",
   "introText": "Suivez une cohorte dans le temps, sur ses projets d’origine et dans tout l’écosystème Wikimédia.",
-  "steps": [
-    "Importer",
-    "Paramétrer",
-    "Collecter",
-    "Résultats"
-  ],
+  "steps": ["Importer", "Paramétrer", "Collecter", "Résultats"],
   "skip": "Aller au contenu",
   "privacy": "Données publiques. Sans compte. Sans conservation de cohorte sur le serveur.",
   "clear": "Effacer les données de cette analyse",
@@ -464,17 +459,22 @@
     "observedTo": "Contributions jusqu’au",
     "projects": "3. Choisir les projets observés",
     "scope": {
-      "preset": "Sélection rapide, modifiable",
-      "all": "Tous les projets Wikimédia, toutes les langues",
-      "custom": "Sélection personnalisée par projet et langue"
+      "preset": "Sélection rapide et modifiable",
+      "all": "Tous les projets Wikimédia dans toutes les langues",
+      "custom": "Sélection personnalisée par projet et par langue"
     },
     "presets": {
-      "frwiki": "Wikipédia en français",
-      "enwiki": "Wikipédia en anglais",
-      "dewiki": "Wikipédia en allemand",
+      "frwiki": "Wikipédia francophone",
+      "enwiki": "Wikipédia anglophone",
+      "dewiki": "Wikipédia germanophone",
       "commonswiki": "Commons",
-      "wikidatawiki": "Wikidata"
+      "wikidatawiki": "Wikidata",
+      "frwiktionary": "Wiktionnaire francophone",
+      "frwikisource": "Wikisource francophone"
     },
+    "automationHelp": "Les comptes identifiés comme bots sont exclus par défaut. Cette case, cochée par défaut, retire aussi du calcul les modifications marquées bot ou automatisées faites par les autres comptes.",
+    "preparationProgress": "Recherche des projets de contribution : {{done}} sur {{total}} comptes examinés.",
+    "progressRefresh": "Les compteurs sont actualisés toutes les deux secondes. Un appel à une source publique peut prendre plus de temps.",
     "allProjects": "{{count}} projets publics du catalogue seront observés, dans toutes leurs langues. Seuls les projets où le compte possède des contributions sont interrogés.",
     "resultTitle": "Combien de nouveaux inscrits ont contribué ?",
     "reportTitle": "Bilan de l’observation",
