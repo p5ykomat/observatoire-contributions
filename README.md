@@ -36,6 +36,12 @@ Every log page is followed and accounts are verified in batches of 50. Pause and
 
 ## Understanding the results
 
+In the results, **Analyse article topics** starts optional analysis of Wikipedia’s main namespace. Wikimedia’s multilingual [`outlink-topic-model`](https://meta.wikimedia.org/wiki/Machine_learning_models/Production/Language_agnostic_link-based_article_topic), served by Lift Wing, uses article links to estimate topics. Scores of at least 0.5 are retained. Topics concern the current article, not the text added or the historical version. Redirects, disambiguations and currently inaccessible pages are excluded.
+
+Choose creations, edits or both, then contributors, distinct articles or contributions. Counts and percentages show their denominator. Topics are grouped into eight broad themes, plus any unknown themes; subtopics are optional. Units may appear in several topics, so percentages can sum to more than 100%. Model confidence scores are never treated as contribution percentages. Classification is beta and can be incorrect.
+
+Coverage distinguishes classified articles, articles with no recognised topic, unavailable sources and articles still to examine. Analysis follows the result filters and runs only on request, separately from contribution collection. Pause and resume preserve examined articles in the page; JSON preserves them after a pause or at completion. Topic CSV includes the measure, filter, denominator, period and model. A short explanation and the official model card are directly accessible in the interface.
+
 The main question is: **how many participants made at least one edit after the event?**
 
 Results are cumulative from the day after the event ends through the chosen deadline, inclusive. An edit on day 2 counts in both the day 30 and day 90 results. This does not establish that a participant is still active on the deadline itself, or that the event caused their later activity.

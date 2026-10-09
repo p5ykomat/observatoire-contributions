@@ -8,6 +8,7 @@ from fastapi.staticfiles import StaticFiles
 
 from backend.analysis.taxonomy import RULES
 from backend.models import BatchRequest, DashboardRequest, GlobalRequest, PageRequest
+from backend.providers.article_topics import ArticleRequest, ArticleTopicsProvider
 from backend.providers.catalog import CatalogProvider
 from backend.providers.centralauth import CentralAuthProvider
 from backend.providers.dashboard import DashboardProvider
@@ -146,6 +147,12 @@ async def namespaces(project: str, request: Request):
 async def contributions(body: PageRequest, request: Request):
     transport, catalog = providers(request)
     return await MediaWikiContributionsProvider(transport, catalog).page(body)
+
+
+@app.post("/api/article-topics")
+async def article_topics(body: ArticleRequest, request: Request):
+    transport, catalog = providers(request)
+    return await ArticleTopicsProvider(transport, catalog).article(body)
 
 
 @app.post("/api/global-contributions")

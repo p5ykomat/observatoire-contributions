@@ -1120,6 +1120,7 @@ export default function App() {
                 toggle={toggle}
                 setQuestion={(question) => update({ question })}
                 setParams={params}
+                saveTopics={(article_topics) => update({ article_topics })}
                 recollect={() =>
                   update({
                     params: { ...s.params, scope: "all", reference: today() },

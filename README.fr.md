@@ -38,6 +38,12 @@ Le chargement suit toutes les pages du journal, puis vérifie les comptes par lo
 
 ## Comprendre les résultats
 
+Depuis les résultats, **Analyser les thématiques des articles** lance une analyse facultative de l’espace principal de Wikipédia. Le modèle multilingue de Wikimédia [`outlink-topic-model`](https://meta.wikimedia.org/wiki/Machine_learning_models/Production/Language_agnostic_link-based_article_topic), servi par Lift Wing, classe les articles grâce à leurs liens. Les scores de confiance d’au moins 0,5 sont retenus. Les thèmes concernent l’article dans son état actuel, pas le texte ajouté ni la version historique de la page. Les redirections, homonymies et pages inaccessibles aujourd’hui sont écartées.
+
+Choisissez créations, modifications ou les deux, puis contributeurs, articles distincts ou contributions. Chaque valeur est accompagnée de son pourcentage et du total utilisé. Un contributeur ou article peut relever de plusieurs thèmes ; les pourcentages peuvent dépasser 100 % au total. Les scores du modèle ne sont jamais utilisés comme pourcentages de contributions. Les thèmes sont regroupés en huit grandes familles (plus les éventuels thèmes inconnus), avec les sous-thèmes disponibles à la demande.
+
+La couverture distingue les articles classés, sans thème reconnu, indisponibles et encore à examiner. Le classement est en bêta et peut comporter des erreurs. Il reprend les filtres des résultats, reste indépendant de la collecte principale et interroge chaque article distinct à la demande. Pause et reprise conservent les résultats dans la page ; le JSON conserve les thèmes après une pause ou à la fin. Le CSV thématique conserve la mesure, le filtre, le dénominateur, la période et le modèle utilisés. Une courte explication et un lien vers la fiche officielle sont accessibles dans l’interface.
+
 La question principale est : **combien de participants ont fait au moins une modification après l’événement ?**
 
 Le bilan est cumulé du lendemain de la fin de l’événement jusqu’à l’échéance choisie incluse. Une modification à J+2 compte dans les résultats à J+30 et à J+90. Cela ne prouve pas que la personne contribue encore le jour de l’échéance, ni que l’événement a causé son activité ultérieure.

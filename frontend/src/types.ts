@@ -53,10 +53,23 @@ export interface Edit {
   timestamp: string;
   namespace: number;
   title: string;
+  page_id?: number | null;
+  new_page?: boolean | null;
   category: Category;
   automation: "normal" | "bot" | "detected" | "unknown";
   tags: string[];
   provider: string;
+}
+export interface ArticleTopics {
+  project: string;
+  title: string;
+  page_id: number | null;
+  first_revision: number | null;
+  model: "outlink-topic-model";
+  threshold: 0.5;
+  fetched_at: string;
+  status: "classified" | "unclassified" | "excluded" | "unavailable";
+  topics: { topic: string; score: number }[];
 }
 export interface Params {
   title: string;
@@ -113,6 +126,7 @@ export interface Session {
   stage: number;
   collection_signature: string | null;
   question?: FollowupQuestion;
+  article_topics?: Record<string, ArticleTopics>;
   new_accounts?: {
     start: string;
     end: string;

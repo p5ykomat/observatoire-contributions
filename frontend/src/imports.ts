@@ -133,6 +133,8 @@ const editSchema = z.object({
   timestamp: z.string().datetime({ offset: true }),
   namespace: z.number().int(),
   title: z.string(),
+  page_id: z.number().int().positive().nullable().optional(),
+  new_page: z.boolean().nullable().optional(),
   category: z.enum(CATEGORIES),
   automation: z.enum(["normal", "bot", "detected", "unknown"]),
   tags: z.array(z.string()),
@@ -241,6 +243,34 @@ const schema = z.object({
       unavailable: z.number().int().nonnegative(),
       excluded: z.number().int().nonnegative(),
     })
+    .optional(),
+  article_topics: z
+    .record(
+      z.string(),
+      z.object({
+        project: z.string(),
+        title: z.string(),
+        page_id: z.number().int().positive().nullable(),
+        first_revision: z.number().int().positive().nullable(),
+        model: z.literal("outlink-topic-model"),
+        threshold: z.literal(0.5),
+        fetched_at: z.string().datetime({ offset: true }),
+        status: z.enum([
+          "classified",
+          "unclassified",
+          "excluded",
+          "unavailable",
+        ]),
+        topics: z
+          .array(
+            z.object({
+              topic: z.string().max(200),
+              score: z.number().min(0).max(1),
+            }),
+          )
+          .max(64),
+      }),
+    )
     .optional(),
 });
 export function importArchive(text: string): Session {

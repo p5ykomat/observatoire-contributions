@@ -14,6 +14,8 @@ import { Chart } from "./Chart";
 import { ObservationSettings } from "./ObservationSettings";
 import { registrationSummary } from "../analysis/registrationSummary";
 import type { Params } from "../types";
+import type { ArticleTopics } from "../types";
+import { WikipediaTopics } from "./WikipediaTopics";
 
 export function Results({
   session,
@@ -21,12 +23,14 @@ export function Results({
   setQuestion,
   setParams,
   recollect,
+  saveTopics,
 }: {
   session: Session;
   toggle: (name: string) => void;
   setQuestion: (question: FollowupQuestion) => void;
   setParams: (params: Partial<Params>) => void;
   recollect: () => void;
+  saveTopics: (cache: Record<string, ArticleTopics>) => void;
 }) {
   const { t, i18n } = useTranslation();
   const [nominative, setNominative] = useState(false);
@@ -437,6 +441,7 @@ export function Results({
           }))}
         />
       </div>
+      <WikipediaTopics session={session} result={r} save={saveTopics} />
       <section className="panel" aria-labelledby="contributor-list-title">
         <h2 id="contributor-list-title">{t("detail")}</h2>
         <p>{t("fup.tableHelp")}</p>

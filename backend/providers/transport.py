@@ -37,7 +37,21 @@ class Transport:
         self.public_cache: dict[str, tuple[float, dict]] = {}
 
     async def get(self, url: str, params: dict[str, Any] | None, provider: str) -> dict:
-        # One external call per task. Retrying and waiting occur in the browser,
+        return await self.request("GET", url, provider, params=params)
+
+    async def post(self, url: str, body: dict[str, Any], provider: str) -> dict:
+        return await self.request("POST", url, provider, json=body)
+
+    async def request(
+        self,
+        method: str,
+        url: str,
+        provider: str,
+        *,
+        params: dict[str, Any] | None = None,
+        json: dict[str, Any] | None = None,
+    ) -> dict:
+        # One external call per transport request. Retrying and waiting occur in the browser,
         # keeping functions short even when Retry-After spans several minutes.
         public = bool(
             params
@@ -50,7 +64,7 @@ class Transport:
         gate = self.xtools_slot if provider == "xtools" else self.mediawiki_slots
         async with gate:
             try:
-                response = await self.client.get(url, params=params)
+                response = await self.client.request(method, url, params=params, json=json)
             except (httpx.TimeoutException, httpx.NetworkError):
                 raise SourceError(provider, 504) from None
         if response.status_code != 200:
@@ -80,7 +94,8 @@ class Transport:
 
 def make_client() -> httpx.AsyncClient:
     agent = os.getenv(
-        "RETENTION_USER_AGENT", "WikimediaRetention/1.0 (https://github.com/p5ykomat/observatoire-contributions)"
+        "RETENTION_USER_AGENT",
+        "WikimediaRetention/1.0 (https://github.com/p5ykomat/observatoire-contributions)",
     )
     return httpx.AsyncClient(
         headers={"User-Agent": agent, "Accept": "application/json"},
