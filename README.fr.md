@@ -28,6 +28,8 @@ Après import, choisissez l’observation depuis l’inscription propre à chaqu
 
 Les comptes identifiés comme bots sont exclus par défaut. La case d’exclusion des modifications marquées bot ou automatisées est visible et cochée par défaut dans ce parcours. Les compteurs de collecte sont actualisés toutes les deux secondes, sans requête supplémentaire. La recherche des projets où les comptes contribuent est affichée séparément du nombre de comptes entièrement traités.
 
+L’interface donne une estimation fixe d’environ 17 minutes pour examiner les projets de contribution de 1 000 comptes. Elle correspond à l’hypothèse d’un appel d’une seconde par compte, soit 16 min 40, et ne constitue pas une durée mesurée. La récupération des modifications ajoute un temps variable.
+
 Les types de pages choisis filtrent uniquement Wikipédia. Tous les types de révisions publiques des autres projets sont pris en compte. Une contribution est une révision publique, y compris sur Commons, et non chaque opération de téléversement ou chaque entrée de journal.
 
 Le bilan textuel, les graphiques et les exports utilisent les mêmes critères. Un compte sans modification reste au dénominateur. Un compte présent sur plusieurs projets compte une seule fois dans le total. « Au moins une modification pendant la période » ne démontre pas une activité continue ni une rétention à la date de fin.
@@ -53,7 +55,7 @@ Les contributions sont des révisions publiques, pas le volume de texte ajouté 
 
 Les API peuvent être indisponibles, retardées ou limiter les appels. Des révisions masquées et des comptes non rattachés peuvent manquer. La détection de l’automatisation est partielle. Un compte renommé n’est pas automatiquement relié à sa nouvelle identité. Les comptes très actifs peuvent nécessiter de nombreuses requêtes et beaucoup de mémoire dans le navigateur.
 
-Les imports manuels ordinaires acceptent jusqu’à 1 000 comptes. Les TXT de cohorte nommés par le module peuvent contenir jusqu’à 100 000 comptes. Le module du journal n’applique pas cette limite ; la restauration JSON accepte jusqu’à 100 000 comptes. Les fichiers sont limités à des fichiers TXT/CSV de 2 Mo et des fichiers JSON de 50 Mo. La collecte n’est pas tronquée silencieusement.
+Les imports manuels ordinaires acceptent jusqu’à 1 000 comptes. Les TXT de cohorte nommés par le module peuvent contenir jusqu’à 100 000 comptes. Le module du journal n’applique pas cette limite ; la restauration JSON accepte jusqu’à 100 000 comptes. Les fichiers TXT, CSV et JSON sont acceptés jusqu’à 50 Mo. La collecte n’est pas tronquée silencieusement.
 
 ## Confidentialité
 

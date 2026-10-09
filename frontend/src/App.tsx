@@ -678,6 +678,7 @@ export default function App() {
                   accept=".txt,.csv"
                   onSelect={(file) => void perform(() => loadFile(file))}
                 />
+                <p className="hint">{t("newAccounts.fileLimit")}</p>
               </section>
               <section className="panel">
                 <h2>Programs & Events Dashboard</h2>
@@ -703,9 +704,7 @@ export default function App() {
                   onSelect={(file) =>
                     void perform(async () => {
                       const current = generation.current;
-                      const imported = importArchive(
-                        await readFile(file, true),
-                      );
+                      const imported = importArchive(await readFile(file));
                       if (current !== generation.current) return;
                       imported.params.selection =
                         imported.params.creation_restriction ||
@@ -995,6 +994,9 @@ export default function App() {
               </label>
               <p className="hint">{t("automationHelp")}</p>
             </fieldset>
+            {s.new_accounts && (
+              <p className="notice">{t("newAccounts.durationInfo")}</p>
+            )}
             <div className="actions">
               <button
                 className="primary"
@@ -1056,6 +1058,9 @@ export default function App() {
               })}
             </p>
             <p className="hint">{t("newAccounts.progressRefresh")}</p>
+            {s.new_accounts && (
+              <p className="notice">{t("newAccounts.durationInfo")}</p>
+            )}
             <progress
               aria-label={t("steps.2")}
               max={retainedAccounts.length}

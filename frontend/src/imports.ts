@@ -2,6 +2,7 @@ import Papa from "papaparse";
 import { z } from "zod";
 import i18n from "./i18n";
 import { CATEGORIES, emptySession, type Account, type Session } from "./types";
+export const MAX_IMPORT_BYTES = 50 * 1024 * 1024;
 export const normalize = (name: string) => {
   const n = name.normalize("NFC").replaceAll("_", " ").trim();
   return n.charAt(0).toUpperCase() + n.slice(1);
@@ -13,7 +14,8 @@ export function importNames(
   accounts: Account[];
   diagnostics: string[];
 } {
-  if (text.length > 2 * 1024 * 1024) throw new Error(i18n.t("errors.file"));
+  if (new TextEncoder().encode(text).byteLength > MAX_IMPORT_BYTES)
+    throw new Error(i18n.t("errors.file"));
   const accounts: Account[] = [],
     diagnostics: string[] = [];
   const seen = new Set<string>();
@@ -70,9 +72,8 @@ export function parseCSV(text: string) {
     throw new Error(i18n.t("errors.csv"));
   return parsed.data;
 }
-export async function readFile(file: File, archive = false) {
-  if (file.size > (archive ? 50 : 2) * 1024 * 1024)
-    throw new Error(i18n.t("errors.file"));
+export async function readFile(file: File) {
+  if (file.size > MAX_IMPORT_BYTES) throw new Error(i18n.t("errors.file"));
   try {
     return new TextDecoder("utf-8", { fatal: true }).decode(
       await file.arrayBuffer(),

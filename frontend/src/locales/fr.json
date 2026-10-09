@@ -186,7 +186,7 @@
   "methodVersion": "Méthodologie version 1.0",
   "errors": {
     "network": "La source publique est indisponible. Vous pouvez reprendre la collecte ou consulter les données déjà obtenues.",
-    "file": "Le fichier est invalide. Utilisez un fichier UTF-8 TXT, CSV ou JSON de moins de 50 Mo (2 Mo pour une liste de comptes).",
+    "file": "Le fichier est invalide. Utilisez un fichier UTF-8 TXT, CSV ou JSON de 50 Mo maximum.",
     "csv": "Le CSV est malformé. Vérifiez le séparateur et les guillemets.",
     "dates": "Renseignez des dates valides, dans l’ordre et antérieures à aujourd’hui.",
     "names": "Importez au moins un nom de compte valide.",
@@ -475,6 +475,8 @@
     "automationHelp": "Les comptes identifiés comme bots sont exclus par défaut. Cette case, cochée par défaut, retire aussi du calcul les modifications marquées bot ou automatisées faites par les autres comptes.",
     "preparationProgress": "Recherche des projets de contribution : {{done}} sur {{total}} comptes examinés.",
     "progressRefresh": "Les compteurs sont actualisés toutes les deux secondes. Un appel à une source publique peut prendre plus de temps.",
+    "durationInfo": "Info : prévoyez environ 17 minutes pour examiner les projets de contribution de 1 000 comptes, puis un temps supplémentaire pour récupérer leurs modifications. Estimation indicative, selon la réponse des API.",
+    "fileLimit": "Fichiers TXT et CSV acceptés jusqu’à 50 Mo.",
     "allProjects": "{{count}} projets publics du catalogue seront observés, dans toutes leurs langues. Seuls les projets où le compte possède des contributions sont interrogés.",
     "resultTitle": "Combien de nouveaux inscrits ont contribué ?",
     "reportTitle": "Bilan de l’observation",

@@ -28,6 +28,8 @@ Observe each account from its own signup until a chosen date, or during a date r
 
 Accounts identified as bots are excluded by default. The checkbox excluding edits flagged as bot or automated is visible and enabled by default in this flow. Collection counters refresh every two seconds without additional network requests. Discovering the projects where accounts contribute is shown separately from the number of fully processed accounts.
 
+The interface shows a fixed estimate of about 17 minutes to examine the contribution projects of 1,000 accounts. This assumes one one-second request per account, or 16 minutes 40 seconds, and is not a measured duration. Retrieving edits adds a variable amount of time.
+
 Text reports, charts and exports use the same criteria. Accounts with zero edits stay in the denominator. Accounts contributing to several projects count once overall. At least one edit during an interval does not establish continuous activity or retention on the deadline itself.
 
 Every log page is followed and accounts are verified in batches of 50. Pause and resume work in the current page. Lists can be exported as CSV or TXT, with the registration date or range in the filename. CSV preserves individual signup dates, local IDs and exclusions. It imports through the main file input without rereading the log; IDs resolve current usernames. TXT preserves usernames and the range in its filename. Analysis JSON then preserves registration provenance, observation criteria and collection progress. The browser must stay open during requests. Monthly cohorts and historical observations may take substantial time; pages are not skipped to speed collection up.
@@ -51,7 +53,7 @@ Contributions are public revisions, not the amount of text added or a complete i
 
 APIs may be unavailable, delayed or rate limited. Hidden revisions and unattached accounts may be missing. Automation detection is partial. Renamed accounts are not automatically linked to a new identity. Very active accounts may require many requests and substantial browser memory.
 
-Ordinary manual imports support up to 1,000 accounts. Cohort TXT files named by the module can contain up to 100,000 accounts. The registration log module does not apply this limit; JSON restoration accepts up to 100,000 accounts. TXT/CSV files are limited to 2 MB and JSON files to 50 MB. Collection is not silently truncated.
+Ordinary manual imports support up to 1,000 accounts. Cohort TXT files named by the module can contain up to 100,000 accounts. The registration log module does not apply this limit; JSON restoration accepts up to 100,000 accounts. TXT, CSV and JSON files up to 50 MB are accepted. Collection is not silently truncated.
 
 ## Privacy
 

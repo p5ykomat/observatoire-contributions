@@ -186,7 +186,7 @@
   "methodVersion": "Methodology version 1.0",
   "errors": {
     "network": "The public source is unavailable. You can resume collection or view data already collected.",
-    "file": "Invalid file. Use a UTF-8 TXT, CSV or JSON file under 50 MB (2 MB for an account list).",
+    "file": "Invalid file. Use a UTF-8 TXT, CSV or JSON file no larger than 50 MB.",
     "csv": "Malformed CSV. Check the separator and quotation marks.",
     "dates": "Enter valid dates in chronological order, no later than today.",
     "names": "Import at least one valid account name.",
@@ -475,6 +475,8 @@
     "automationHelp": "Accounts identified as bots are excluded by default. This checkbox, enabled by default, also excludes edits flagged as bot or automated made by other accounts.",
     "preparationProgress": "Finding contribution projects: {{done}} of {{total}} accounts examined.",
     "progressRefresh": "Counters refresh every two seconds. A public source request may take longer.",
+    "durationInfo": "Info: allow roughly 17 minutes to examine the contribution projects of 1,000 accounts, plus extra time to retrieve their edits. This is an indicative estimate and depends on API response times.",
+    "fileLimit": "TXT and CSV files up to 50 MB are accepted.",
     "allProjects": "{{count}} public catalogue projects will be observed, across all their languages. Only projects where the account has contributions are queried.",
     "resultTitle": "How many new accounts contributed?",
     "reportTitle": "Observation report",
