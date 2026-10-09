@@ -76,7 +76,7 @@ export function NewAccountsImport({
               </label>
             ))}
           </div>
-          <div className="form-grid">
+          <div className="form-grid date-grid">
             <label>
               {t(
                 mode === "day"
