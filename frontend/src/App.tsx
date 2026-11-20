@@ -1206,6 +1206,7 @@ export default function App() {
                 toggle={toggle}
                 setQuestion={(question) => update({ question })}
                 setParams={params}
+                saveArticleStatus={(article_status) => update({ article_status })}
                 saveTopics={(article_topics, article_topics_kind) =>
                   update({ article_topics, article_topics_kind })
                 }

@@ -186,6 +186,23 @@ const schema = z.object({
   params: paramsSchema,
   collection_params: paramsSchema.optional(),
   article_topics_kind: z.enum(["creation", "modification", "both"]).optional(),
+  article_status: z
+    .record(
+      z.string(),
+      z.object({
+        project: z.string(),
+        revision: z.number().int().positive(),
+        title: z.string(),
+        current_title: z.string(),
+        page_id: z.number().int().positive().nullable(),
+        status: z.enum(["online", "deleted", "unavailable"]),
+        recreated: z.boolean(),
+        redirect: z.boolean(),
+        disambiguation: z.boolean(),
+        checked_at: z.string().datetime({ offset: true }),
+      }),
+    )
+    .optional(),
   cohort: z.array(accountSchema).max(100000),
   edits: z.array(editSchema).max(2000000),
   catalog: z.array(

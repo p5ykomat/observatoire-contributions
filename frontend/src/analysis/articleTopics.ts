@@ -43,6 +43,62 @@ export function creationType(
     : null;
 }
 
+// Count creation revisions independently of the optional topic model. Redirects
+// and disambiguation pages belong to this main-namespace activity total too.
+export function wikipediaActivity(result: FollowupResult, session: Session) {
+  const edits = articleEdits(result, session);
+  const creations = edits.filter(
+    (edit) =>
+      creationType(edit, session.article_topics?.[articleKey(edit)]) === true,
+  );
+  const modifications = edits.filter(
+    (edit) =>
+      creationType(edit, session.article_topics?.[articleKey(edit)]) === false,
+  );
+  return {
+    contributions: edits.length,
+    creations: creations.length,
+    deletedCreations: creations.filter((edit) => edit.deleted_page).length,
+    modifications: modifications.length,
+    unknownType: edits.length - creations.length - modifications.length,
+  };
+}
+
+export const creationKey = (project: string, revision: number) =>
+  `${project}:${revision}`;
+
+export function creationStateSummary(result: FollowupResult, session: Session) {
+  const creations = articleEdits(result, session).filter(
+    (edit) =>
+      creationType(edit, session.article_topics?.[articleKey(edit)]) === true,
+  );
+  const states = creations.map(
+    (edit) =>
+      session.article_status?.[creationKey(edit.project, edit.revision)],
+  );
+  const online = states.filter((state) => state?.status === "online").length;
+  const deleted = states.filter((state) => state?.status === "deleted").length;
+  return {
+    total: creations.length,
+    online,
+    deleted,
+    unconfirmed: creations.length - online - deleted,
+    recreated: states.filter(
+      (state) => state?.status === "deleted" && state.recreated,
+    ).length,
+    online_other_pages: states.filter(
+      (state) =>
+        state?.status === "online" && (state.redirect || state.disambiguation),
+    ).length,
+    checked_at:
+      states
+        .filter(Boolean)
+        .map((state) => state!.checked_at)
+        .sort()
+        .at(-1) ?? null,
+  };
+}
+
 export function topicGroup(topic: string) {
   const value = topic.toLowerCase().replaceAll(" ", "_");
   if (value.startsWith("geography.")) return "geography";
@@ -66,11 +122,10 @@ export function summarizeArticles(
   const eligible = edits.filter(
     (e) => e.deleted_page || cache[articleKey(e)]?.status !== "excluded",
   );
-  const selected = eligible.filter(
-    (e) =>
-      kind === "both" ||
-      creationType(e, cache[articleKey(e)]) === (kind === "creation"),
-  );
+  const matchesKind = (e: Edit) =>
+    kind === "both" ||
+    creationType(e, cache[articleKey(e)]) === (kind === "creation");
+  const selected = eligible.filter((e) => matchesKind(e));
   const identity = (e: Edit) => {
     const m = cache[articleKey(e)];
     return m?.page_id ? e.project + ":id:" + m.page_id : articleKey(e);
@@ -145,7 +200,12 @@ export function summarizeArticles(
     deleted: deleted.size,
     excluded: new Set(
       edits
-        .filter((e) => cache[articleKey(e)]?.status === "excluded")
+        .filter(
+          (e) =>
+            !e.deleted_page &&
+            matchesKind(e) &&
+            cache[articleKey(e)]?.status === "excluded",
+        )
         .map(identity),
     ).size,
   };

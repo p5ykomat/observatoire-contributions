@@ -3,9 +3,17 @@ import {
   articleEdits,
   articleKey,
   creationType,
+  creationKey,
+  creationStateSummary,
   summarizeArticles,
+  wikipediaActivity,
 } from "./analysis/articleTopics";
-import { emptySession, type Edit, type ArticleTopics } from "./types";
+import {
+  emptySession,
+  type Edit,
+  type ArticleTopics,
+  type ArticleStatus,
+} from "./types";
 import { importArchive, importNames } from "./imports";
 import { analyzeFollowup } from "./analysis/followup";
 
@@ -45,6 +53,138 @@ const topics: ArticleTopics = {
 };
 
 describe("article topics", () => {
+  it("partitions creation states without adding reused titles twice and respects current filters", () => {
+    const session = emptySession();
+    session.params.start = session.params.end = "2026-02-01";
+    session.catalog = [
+      {
+        id: "frwiki",
+        domain: "fr.wikipedia.org",
+        label: "FR",
+        family: "wikipedia",
+      },
+    ];
+    const edits = [1, 2, 3].map((revision) => ({
+      ...edit(revision, "TestAccount", revision),
+      new_page: true,
+    }));
+    const state = (
+      revision: number,
+      status: ArticleStatus["status"],
+      recreated = false,
+    ): ArticleStatus => ({
+      project: "frwiki",
+      revision,
+      title: "Article",
+      current_title: "Article",
+      page_id: revision,
+      status,
+      recreated,
+      redirect: false,
+      disambiguation: false,
+      checked_at: "2026-11-20T12:00:00Z",
+    });
+    session.article_status = {
+      [creationKey("frwiki", 1)]: state(1, "online"),
+      [creationKey("frwiki", 2)]: state(2, "deleted", true),
+      [creationKey("frwiki", 999)]: state(999, "online"),
+    };
+    const result = { rows: [{ included: true, edits }] } as ReturnType<
+      typeof analyzeFollowup
+    >;
+    const summary = creationStateSummary(result, session);
+    expect(summary).toMatchObject({
+      total: 3,
+      online: 1,
+      deleted: 1,
+      unconfirmed: 1,
+      recreated: 1,
+    });
+    expect(summary.online + summary.deleted + summary.unconfirmed).toBe(
+      summary.total,
+    );
+    expect(
+      creationStateSummary(
+        { ...result, rows: [{ ...result.rows[0], edits: [edits[0]] }] },
+        session,
+      ),
+    ).toMatchObject({
+      total: 1,
+      online: 1,
+      deleted: 0,
+      unconfirmed: 0,
+      recreated: 0,
+    });
+    expect(importArchive(JSON.stringify(session)).article_status).toEqual(
+      session.article_status,
+    );
+  });
+  it("reconciles 40 creations, 23 archives, 2 excluded pages and 15 topic candidates without model-dependent creation totals", () => {
+    const s = emptySession();
+    s.catalog = [
+      {
+        id: "frwiki",
+        domain: "fr.wikipedia.org",
+        label: "FR",
+        family: "wikipedia",
+      },
+    ];
+    const edits = Array.from({ length: 40 }, (_, i) => ({
+      ...edit(i + 1, "TestAccount", i + 1),
+      title: `Page ${i + 1}`,
+      new_page: true,
+      deleted_page: i < 23,
+    }));
+    const cache = Object.fromEntries(
+      edits.slice(23).map((e, i) => [
+        articleKey(e),
+        {
+          ...topics,
+          page_id: e.page_id!,
+          first_revision: e.revision,
+          status: i < 2 ? "excluded" : i === 2 ? "unavailable" : "classified",
+        },
+      ]),
+    );
+    const summary = summarizeArticles(
+      edits,
+      cache as Record<string, ArticleTopics>,
+      "creation",
+      "articles",
+    );
+    expect(summary).toMatchObject({
+      articles: 38,
+      deleted: 23,
+      excluded: 2,
+      classified: 14,
+      unavailable: 1,
+    });
+    const result = {
+      rows: [{ included: true, edits: [...edits, edits[0]] }],
+    } as ReturnType<typeof analyzeFollowup>;
+    expect(wikipediaActivity(result, s)).toMatchObject({
+      creations: 40,
+      deletedCreations: 23,
+      modifications: 0,
+      unknownType: 0,
+    });
+    const publicSummary = summarizeArticles(
+      edits.filter((e) => !e.deleted_page),
+      cache as Record<string, ArticleTopics>,
+      "creation",
+      "articles",
+    );
+    expect(publicSummary).toMatchObject({
+      articles: 15,
+      deleted: 0,
+      excluded: 2,
+      classified: 14,
+      unavailable: 1,
+    });
+    expect(publicSummary.articles).toBe(
+      publicSummary.classified + publicSummary.unavailable,
+    );
+  });
   it("keeps contributors, articles and revisions separate, with overlap and unclassified denominators", () => {
     const edits = [
       edit(1),

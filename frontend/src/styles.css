@@ -17,6 +17,51 @@
 .results-exploration-help {
   max-width: 85ch;
 }
+.panel > details > summary,
+.contributors-summary {
+  font-size: 24px;
+  font-weight: 700;
+}
+.panel > details > summary h2,
+.contributors-summary h2 {
+  display: inline;
+  font-size: inherit;
+  margin: 0;
+}
+.panel > .contribution-calendar > summary,
+.panel > .key-figures > summary {
+  font-size: 24px;
+}
+.key-figures .wikipedia-topics {
+  margin-block-start: 32px;
+  padding-block-start: 24px;
+  border-block-start: 1px solid var(--line);
+}
+.topics-disclosure > summary h3 {
+  display: inline;
+  font-size: 20px;
+  margin: 0;
+}
+.article-statistics {
+  margin-block: 24px 32px;
+}
+.article-status-counts {
+  padding-inline-start: 22px;
+}
+.article-status-counts li {
+  margin-block: 12px;
+}
+.statistics-account-link {
+  display: inline-block;
+  margin-inline-start: 12px;
+}
+.deleted-controls > h2 {
+  margin-block-start: 0;
+}
+.weekday-bars strong {
+  font-size: 14px;
+  white-space: nowrap;
+}
 .topics-disclosure > summary,
 .contribution-calendar > summary {
   font-size: 20px;
@@ -602,6 +647,7 @@ input[type="file"] {
 }
 .contributors-summary > span {
   display: inline-block;
+  margin-inline-start: 16px;
   color: var(--muted);
   font-size: 14px;
   font-weight: 400;

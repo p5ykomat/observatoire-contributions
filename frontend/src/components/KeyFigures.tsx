@@ -1,15 +1,25 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { Session } from "../types";
+import type { Session, ArticleStatus, ArticleTopics } from "../types";
 import type { FollowupResult } from "../analysis/followup";
+import { ArticleStatistics } from "./ArticleStatistics";
+import { WikipediaTopics } from "./WikipediaTopics";
+import { contributionsURL } from "../analysis/contributionLinks";
 import { activityDays, observedContributions } from "../analysis/activity";
 
 export function KeyFigures({
   session,
   result,
+  saveArticleStatus,
+  saveTopics,
 }: {
   session: Session;
   result: FollowupResult;
+  saveArticleStatus: (cache: Record<string, ArticleStatus>) => void;
+  saveTopics: (
+    cache: Record<string, ArticleTopics>,
+    kind: "creation" | "modification" | "both",
+  ) => void;
 }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -19,18 +29,42 @@ export function KeyFigures({
         className="key-figures"
         onToggle={(e) => setOpen(e.currentTarget.open)}
       >
-        <summary>{t("keyFigures.title")}</summary>
-        {open &&
-          (result.active ? (
-            <Figures session={session} result={result} />
-          ) : (
-            <p>{t("activity.empty")}</p>
-          ))}
+        <summary>
+          <h2>{t("keyFigures.title")}</h2>
+        </summary>
+        {open && (
+          <>
+            <ArticleStatistics
+              session={session}
+              result={result}
+              save={saveArticleStatus}
+            />
+            <h3>{t("keyFigures.accountsTitle")}</h3>
+            {result.active ? (
+              <Figures session={session} result={result} />
+            ) : (
+              <p>{t("activity.empty")}</p>
+            )}
+            <WikipediaTopics
+              session={session}
+              result={result}
+              save={saveTopics}
+            />
+          </>
+        )}
       </details>
     </section>
   );
 }
-function Names({ names }: { names: string[] }) {
+function Names({
+  names,
+  session,
+  result,
+}: {
+  names: string[];
+  session: Session;
+  result: FollowupResult;
+}) {
   const { t } = useTranslation();
   const [page, setPage] = useState(0);
   const pages = Math.max(1, Math.ceil(names.length / 25)),
@@ -41,7 +75,29 @@ function Names({ names }: { names: string[] }) {
       <summary>{t("keyFigures.names", { count: names.length })}</summary>
       <ul>
         {names.slice(current * 25, current * 25 + 25).map((name) => (
-          <li key={name}>{name}</li>
+          <li key={name}>
+            {name}{" "}
+            {(
+              result.rows.find((row) => row.account.username === name)
+                ?.projects ?? []
+            ).map((id) => {
+              const project = session.catalog.find(
+                (project) => project.id === id,
+              );
+              const href = project && contributionsURL(project, name);
+              return href ? (
+                <a
+                  className="statistics-account-link"
+                  key={id}
+                  href={href}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {t("keyFigures.contributionsOn", { project: project.domain })}
+                </a>
+              ) : null;
+            })}
+          </li>
         ))}
       </ul>
       {pages > 1 && (
@@ -153,21 +209,25 @@ function Figures({
             count: facts.single.length,
             percent: percent(facts.single.length),
           })}
-          <Names names={facts.single} />
+          <Names names={facts.single} session={session} result={result} />
         </li>
         <li>
           {t("keyFigures.multi", {
             count: facts.multi.length,
             percent: percent(facts.multi.length),
           })}
-          <Names names={facts.multi} />
+          <Names names={facts.multi} session={session} result={result} />
         </li>
         <li>
           {t("keyFigures.multiFamilies", {
             count: facts.multiFamilies.length,
             percent: percent(facts.multiFamilies.length),
           })}
-          <Names names={facts.multiFamilies} />
+          <Names
+            names={facts.multiFamilies}
+            session={session}
+            result={result}
+          />
         </li>
       </ul>
     </div>

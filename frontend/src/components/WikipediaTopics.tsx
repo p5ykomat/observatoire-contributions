@@ -25,12 +25,14 @@ export function WikipediaTopics({
   const { t, i18n } = useTranslation();
   const [open, setOpen] = useState(false);
   const [kind, setKind] = useState<ArticleKind>(
-    session.article_topics_kind ?? "creation",
+    session.article_topics_kind === "modification"
+      ? "modification"
+      : "creation",
   );
   const metric = "articles";
   const kindRef = useRef(kind);
   kindRef.current = kind;
-  const [detailed, setDetailed] = useState(false);
+  const detailed = false;
   const [cache, setCache] = useState(session.article_topics ?? {});
   const [progress, setProgress] = useState<{
     done: number;
@@ -42,7 +44,16 @@ export function WikipediaTopics({
   const values = useRef(cache);
   const saveRef = useRef(save);
   saveRef.current = save;
-  const edits = useMemo(() => articleEdits(result, session), [result, session]);
+  const edits = useMemo(
+    () =>
+      articleEdits(result, session).filter(
+        (edit) =>
+          !edit.deleted_page &&
+          session.article_status?.[`${edit.project}:${edit.revision}`]
+            ?.status !== "deleted",
+      ),
+    [result, session],
+  );
   const candidates = edits.filter(
     (edit) =>
       !edit.deleted_page &&
@@ -67,6 +78,16 @@ export function WikipediaTopics({
     () => summarizeArticles(edits, cache, kind, metric, detailed),
     [edits, cache, kind, metric, detailed],
   );
+  const subtopics = useMemo(
+    () => summarizeArticles(edits, cache, kind, metric, true),
+    [edits, cache, kind],
+  );
+  const subtopicLabel = (topic: string) =>
+    t(
+      "topics.labels." +
+        topic.split(".").at(-1)!.replaceAll("*", "").toLowerCase(),
+      { defaultValue: topic.split(".").at(-1)!.replaceAll("_", " ") },
+    );
   const number = (n: number) =>
     n.toLocaleString(i18n.resolvedLanguage, { maximumFractionDigits: 1 });
   const share = (n: number, total: number) =>
@@ -79,12 +100,6 @@ export function WikipediaTopics({
           { defaultValue: topic.split(".").at(-1)!.replaceAll("_", " ") },
         )
       : t("topics.groups." + topic);
-  const needsWork = candidates.some(
-    (edit) =>
-      !cache[articleKey(edit)] ||
-      cache[articleKey(edit)].status === "unavailable" ||
-      (kind !== "creation" && cache[articleKey(edit)].model_skipped),
-  );
   async function run(reset = false) {
     setOpen(true);
     if (controller.current && !controller.current.signal.aborted) return;
@@ -178,10 +193,10 @@ export function WikipediaTopics({
     }
   }
   return (
-    <section className="panel wikipedia-topics" aria-labelledby="topics-title">
+    <section className="wikipedia-topics" aria-labelledby="topics-title">
       <details className="topics-disclosure">
         <summary>
-          <h2 id="topics-title">{t("topics.title")}</h2>
+          <h3 id="topics-title">{t("topics.title")}</h3>
         </summary>
         <p>{t("topics.intro")}</p>
         <p className="hint">{t("topics.independent")}</p>
@@ -219,7 +234,7 @@ export function WikipediaTopics({
                 saveRef.current(values.current, next);
               }}
             >
-              {(["both", "creation", "modification"] as const).map((v) => (
+              {(["creation", "modification"] as const).map((v) => (
                 <option key={v} value={v}>
                   {t("topics.kinds." + v)}
                 </option>
@@ -232,28 +247,19 @@ export function WikipediaTopics({
             className="primary"
             aria-expanded={open}
             aria-controls={open ? "topic-analysis-content" : undefined}
-            disabled={running || !edits.length || (open && !needsWork)}
-            onClick={() => void run()}
+            disabled={running || !edits.length}
+            onClick={() => void run(!(open && summary.pending > 0))}
           >
-            {t(
-              open
-                ? needsWork
-                  ? "topics.resume"
-                  : "topics.complete"
-                : "topics.launch",
-            )}
+            {t("topics.launch")}
           </button>
           {running && (
             <button onClick={() => controller.current?.abort()}>
               {t("pause")}
             </button>
           )}
-          {open && (
-            <button
-              disabled={running || !candidates.length}
-              onClick={() => void run(true)}
-            >
-              {t("topics.restart")}
+          {open && summary.unavailable > 0 && (
+            <button disabled={running} onClick={() => void run()}>
+              {t("topics.resume")}
             </button>
           )}
         </div>
@@ -264,7 +270,9 @@ export function WikipediaTopics({
             {!result.complete && (
               <p className="notice">{t("topics.partial")}</p>
             )}
-            {progress && <p role="status">{t("topics.progress", progress)}</p>}
+            {running && progress && (
+              <p role="status">{t("topics.progress", progress)}</p>
+            )}
             {running && (
               <progress
                 aria-label={t("topics.progressLabel")}
@@ -284,35 +292,25 @@ export function WikipediaTopics({
               })}
             </p>
             <h3>{t("topics.ranking")}</h3>
-            <label className="check">
-              <input
-                type="checkbox"
-                checked={detailed}
-                onChange={(e) => setDetailed(e.target.checked)}
-              />
-              {t("topics.detailed")}
-            </label>
             <p className="hint">
               {t("topics.base." + metric, { count: number(summary.base) })}{" "}
               {t("topics.overlap")}
             </p>
             <p role="status">
-              {t("topics.coverage", {
-                classified: number(summary.classified),
-                total: number(summary.articles),
-                rate: share(summary.classified, summary.articles),
-                unclassified: number(summary.unclassified),
-                unavailable: number(summary.unavailable),
-                pending: number(summary.pending),
-              })}
+              {(
+                [
+                  ["classifiedCount", summary.classified],
+                  ["unclassifiedCount", summary.unclassified],
+                  ["unavailableCount", summary.unavailable],
+                  ["pendingCount", summary.pending],
+                ] as const
+              )
+                .filter(([, count]) => count > 0)
+                .map(([label, count]) => t("topics." + label, { count }))
+                .join(" ; ")}
             </p>
             {summary.unavailable > 0 && (
               <p className="notice">{t("topics.unavailable")}</p>
-            )}
-            {summary.deleted > 0 && (
-              <p className="hint">
-                {t("topics.deleted", { count: summary.deleted })}
-              </p>
             )}
             {summary.excluded > 0 && (
               <p className="hint">
@@ -336,6 +334,29 @@ export function WikipediaTopics({
                     </li>
                   ))}
                 </ol>
+                {subtopics.rows.length > 0 && (
+                  <>
+                    <h4>{t("topics.subtopicsTitle")}</h4>
+                    <ol
+                      className="topic-bars topic-subtopics"
+                      aria-label={t("topics.subtopicsTitle")}
+                    >
+                      {subtopics.rows.slice(0, 10).map((row) => (
+                        <li key={row.topic}>
+                          <span className="topic-name">
+                            {subtopicLabel(row.topic)}
+                          </span>
+                          <span className="topic-bar-track" aria-hidden="true">
+                            <span style={{ width: row.percent + "%" }} />
+                          </span>
+                          <strong>
+                            {number(row.count)} ({number(row.percent)} %)
+                          </strong>
+                        </li>
+                      ))}
+                    </ol>
+                  </>
+                )}
                 <details>
                   <summary>{t("topics.allThemes")}</summary>
                   <div
@@ -372,8 +393,22 @@ export function WikipediaTopics({
                         [
                           "\ufeff" +
                             Papa.unparse(
-                              summary.rows.map((row) => ({
-                                theme: topicLabel(row.topic),
+                              [
+                                ...summary.rows.map((row) => ({
+                                  ...row,
+                                  level: "theme",
+                                })),
+                                ...subtopics.rows.map((row) => ({
+                                  ...row,
+                                  level: "subtopic",
+                                })),
+                              ].map((row) => ({
+                                theme:
+                                  row.level === "theme"
+                                    ? topicLabel(row.topic)
+                                    : subtopicLabel(row.topic),
+                                level: row.level,
+                                deleted_articles_excluded: true,
                                 metric,
                                 kind,
                                 count: row.count,

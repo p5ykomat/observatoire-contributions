@@ -7,7 +7,7 @@ import {
   projectActivity,
   contributionURL,
 } from "../analysis/activity";
-import { creationType } from "../analysis/articleTopics";
+import { wikipediaActivity } from "../analysis/articleTopics";
 
 export function ContributionAnalysis({
   session,
@@ -26,23 +26,10 @@ export function ContributionAnalysis({
     [page, setPage] = useState(0);
   const count = Math.max(1, Math.ceil(edits.length / 50)),
     current = Math.min(page, count - 1);
-  const wikis = useMemo(
-    () =>
-      new Set(
-        session.catalog
-          .filter((p) => p.family === "wikipedia")
-          .map((p) => p.id),
-      ),
-    [session.catalog],
-  );
   const wikipedia = useMemo(
-    () => edits.filter((e) => wikis.has(e.project) && e.namespace === 0),
-    [edits, wikis],
+    () => wikipediaActivity(result, session),
+    [result, session],
   );
-  const creations = wikipedia.filter((e) => creationType(e) === true).length;
-  const modifications = wikipedia.filter(
-    (e) => creationType(e) === false,
-  ).length;
   const fmt = (n: number) =>
     n.toLocaleString(i18n.resolvedLanguage, { maximumFractionDigits: 1 });
   return (
@@ -88,18 +75,17 @@ export function ContributionAnalysis({
           </tr>
         </tfoot>
       </table>
-      {wikipedia.length > 0 && (
+      {wikipedia.contributions > 0 && (
         <p>
           {t("activity.wikipedia", {
-            total: wikipedia.length,
-            creations,
-            modifications,
-            unknown: wikipedia.length - creations - modifications,
+            total: wikipedia.contributions,
+            creations: wikipedia.creations,
+            modifications: wikipedia.modifications,
           })}
-          {wikipedia.length > creations + modifications &&
+          {wikipedia.unknownType > 0 &&
             " " +
               t("activity.wikipediaUnknown", {
-                count: wikipedia.length - creations - modifications,
+                count: wikipedia.unknownType,
               })}
         </p>
       )}

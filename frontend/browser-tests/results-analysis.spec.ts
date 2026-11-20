@@ -191,7 +191,7 @@ test("desktop results explain 24 contributions, hide zero unknowns and show UTC 
     4,
   );
   await expect(calendar.locator(".weekday-bars li").nth(4)).toContainText(
-    "3,5",
+    "7 (29,2 %)",
   );
   await page.locator(".contributors-summary").click();
   await page.getByRole("button", { name: "Account001", exact: true }).click();
@@ -305,7 +305,7 @@ test("year calendars handle leap years and switching years without rendering eve
     "Contributions : 1 ; comptes distincts : 1",
   );
   await expect(calendar.locator(".weekday-bars li").nth(3)).toContainText(
-    "<0,1",
+    "1 (50 %)",
   );
   await expect(page.locator(".individual")).toHaveCount(0);
   await mkdir("../output/results-review", { recursive: true });

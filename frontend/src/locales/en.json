@@ -2,12 +2,7 @@
   "app": "Wikimedia Retention",
   "tagline": "Understand contribution paths after an event",
   "introText": "Follow a cohort over time, on its original projects and across the Wikimedia ecosystem.",
-  "steps": [
-    "Import",
-    "Settings",
-    "Collect",
-    "Results"
-  ],
+  "steps": ["Import", "Settings", "Collect", "Results"],
   "skip": "Skip to content",
   "privacy": "Public data. No account required. No cohorts stored on the server.",
   "clear": "Clear this analysis",
@@ -431,7 +426,7 @@
     "by": "Sort by {{column}}"
   },
   "deleted": {
-    "title": "Contributions to subsequently deleted articles",
+    "title": "Wikipedia articles subsequently deleted",
     "includeCreations": "Include creations of subsequently deleted articles",
     "includeModifications": "Include edits to subsequently deleted articles",
     "help": "These records are searched during collection on the observed Wikipedia editions. The checkboxes immediately recalculate results without new requests. Reverted edits on existing articles remain counted.",
@@ -440,30 +435,32 @@
     "incomplete": "Archived contribution collection could not finish for {{count}} accounts. Results including them remain a minimum.",
     "classificationIncomplete": "The deleted creation source did not respond. Separately excluding creations or edits cannot yet provide a definitive rate.",
     "oldArchive": "This analysis does not yet contain the additional archived contribution collection. Restart collection to retrieve it. The checkboxes only affect records already retrieved.",
-    "revision": "Contribution archived after deletion"
+    "revision": "Contribution archived after deletion",
+    "scope": "These two checkboxes apply only to creations and edits in Wikipedia’s article namespace. They do not apply to Commons, Wikidata or other projects. Reverted edits that remain in an existing article’s history still count.",
+    "dateHelp": "Contributions are counted by their date. A contribution made during the period remains included if the page is later deleted and the relevant checkbox is checked, provided its public metadata was retrieved."
   },
   "topics": {
-    "title": "Wikipedia article topic analysis (beta)",
+    "title": "Wikipedia article topics (beta)",
     "deleted": "{{count}} deleted articles are included in the counts without an available topic. These articles are not sent to the model. Their contributions follow the two inclusion checkboxes in the results.",
     "partial": "The period or collection is incomplete. These statistics describe only the contributions already observed.",
-    "intro": "Created articles are shown by default. You can also select edited articles. Wikimedia’s outlink-topic-model is only called for accessible articles in the selection.",
+    "intro": "Choose created or edited articles that remain accessible. Contributions on deleted pages are excluded here regardless of the two general result checkboxes. Redirects and disambiguation pages are excluded from classification. Topics describe articles, not the text added.",
     "methodTitle": "Understand the model",
     "method": "outlink-topic-model is Wikimedia’s multilingual model, available through Lift Wing. It uses fastText and article links mapped to Wikidata to estimate 64 topics. We retain confidence scores of at least 0.5.",
     "methodLimits": "It classifies the article at analysis time, not the text added. Topics may overlap or be missing. Classification is indicative; scores are not percentages of contributions. JSON preserves the classification for reuse.",
     "modelLink": "Read the official model card",
-    "launch": "Analyse topics",
+    "launch": "Analyse",
     "hide": "Hide this analysis",
     "resume": "Retry unavailable articles",
     "complete": "Topic analysis complete",
     "empty": "No Wikipedia article contributions in the current selection. Check the selected projects, languages and page types.",
-    "progress": "Articles examined: {{done}} of {{total}}.",
+    "progress": "Pages checked: {{done}} of {{total}}.",
     "progressLabel": "Article analysis progress",
     "period": "This analysis follows the period, accounts, projects and filters selected above. Only Wikipedia’s main namespace is included. Pausing keeps examined articles in this page; JSON saves them after a pause or at completion.",
     "kind": "Creations or edits",
     "kinds": {
       "both": "Creations and edits",
-      "creation": "Creations",
-      "modification": "Edits to articles",
+      "creation": "Created articles still accessible",
+      "modification": "Edited articles still accessible",
       "unknown": "Type not yet determined"
     },
     "metric": "Ranking measure",
@@ -472,7 +469,7 @@
       "articles": "Distinct articles",
       "edits": "Contributions"
     },
-    "answer": "Selection: {{articles}} distinct articles with {{edits}} contributions by {{contributors}} Wikipedia accounts.",
+    "answer": "Distinct articles retained for topic analysis: {{articles}}.",
     "volumeTitle": "Observed creations and edits",
     "volumeCaption": "Article contributions before the creation or edit filter",
     "share": "Share of total",
@@ -571,8 +568,13 @@
     "enterprise": "Wikimedia Enterprise provides article categories, among other metadata. Its documented schema does not provide a direct equivalent of this model’s 64 topics; changing APIs therefore does not guarantee better classification.",
     "enterpriseLink": "Read about Enterprise access from Toolforge",
     "restart": "Restart topic analysis from scratch",
-    "actionsHelp": "Choose which articles to examine, then analyse. Changing the selection keeps cached classifications. Restarting queries the model again for this selection without collecting account contributions again.",
-    "examinedHelp": "An attempt may fail: the coverage below distinguishes classified articles from unavailable sources."
+    "actionsHelp": "Analyse starts a fresh classification of this selection. If requests fail, retry only unavailable articles. General contribution counts do not change.",
+    "examinedHelp": "Pages checked during processing may subsequently be excluded when they do not match this selection. The final summary concerns retained articles only.",
+    "classifiedCount": "Classified: {{count}}",
+    "unclassifiedCount": "No recognized topic: {{count}}",
+    "unavailableCount": "Unavailable to the model: {{count}}",
+    "pendingCount": "Pending analysis: {{count}}",
+    "subtopicsTitle": "Most represented subtopics"
   },
   "newAccounts": {
     "title": "New registrations on French Wikipedia",
@@ -698,7 +700,7 @@
     "accounts": "Contributing accounts",
     "total": "Total",
     "empty": "No contributions in this selection.",
-    "wikipedia": "On Wikipedia articles: {{total}} contributions, including {{creations}} creations and {{modifications}} edits.",
+    "wikipedia": "In Wikipedia’s article namespace: {{total}} contributions, including {{creations}} creations and {{modifications}} edits.",
     "details": "Open contribution details",
     "detailHelp": "Contributions matching the current filters. Times are UTC. Deleted contributions link to the public deletion log.",
     "page": "Page",
@@ -710,7 +712,11 @@
     "explore": "Explore results by changing the period, projects or contribution types. The report, charts, lists and calendars immediately recalculate from available data. Additional collection is needed only when data is missing.",
     "collectPeriod": "Requested collection: {{start}} to {{end}} inclusive, in UTC.",
     "settings": "Change the period, projects and contribution types",
-    "wikipediaUnknown": "Type not determined: {{count}}."
+    "wikipediaUnknown": "Type not determined: {{count}}.",
+    "creationsTitle": "Creations in Wikipedia’s article namespace",
+    "deletedCreations": "Including creations subsequently deleted: {{count}}.",
+    "creationsScope": "Pages created on the selected Wikipedias during this period, including redirects and disambiguation pages.",
+    "creationMinimum": "Identified minimum: some contributions do not yet distinguish creations from edits."
   },
   "calendar": {
     "title": "Contribution calendar",
@@ -725,7 +731,7 @@
     "detail": "Daily details",
     "daySummary": "Contributions: {{count}}; distinct accounts: {{accounts}}.",
     "weekTitle": "Which weekdays have the most activity?",
-    "weekHelp": "The average divides contributions by the number of occurrences of each weekday in the observed period. This makes two Fridays comparable to one Saturday. Account counts are distinct per weekday and can overlap between rows.",
+    "weekHelp": "Contribution counts by weekday and share of the selected period’s total. All Mondays are grouped, then all Tuesdays, and so on. Rounded percentages sum to approximately 100%. Dates use UTC.",
     "weekMeasure": "Chart measure",
     "average": "Average contributions per day",
     "weekDetails": "Activity by weekday",
@@ -737,16 +743,36 @@
     "oneContribution": "contribution"
   },
   "keyFigures": {
-    "title": "Other key figures",
+    "title": "Statistics",
     "help": "Figures calculated only from observed contributions in the current selection. Percentages use contributing accounts as their denominator. Times are UTC. In a tie, the first date or hour is shown.",
     "activeDays": "Days with at least one contribution: {{count}}.",
     "record": "Most active day: {{date}}, with {{count}} contributions.",
     "ties": "{{count}} days share this maximum.",
     "hour": "Most active time slot: {{start}}:00 to {{end}}:00 UTC, with {{count}} contributions across the period.",
     "average": "Per active account ({{count}} accounts): {{mean}} contributions on average.",
+    "average_one": "Per active account ({{count}} account): {{mean}} contributions on average.",
     "single": "Accounts with exactly one contribution: {{count}} ({{percent}}% of active accounts).",
     "multi": "Accounts active on multiple wikis, including language editions: {{count}} ({{percent}}% of active accounts).",
     "multiFamilies": "Accounts active in multiple project families: {{count}} ({{percent}}% of active accounts).",
-    "names": "View the {{count}} matching accounts"
+    "names": "View the {{count}} matching accounts",
+    "names_one": "View the matching account",
+    "accountsTitle": "Account activity",
+    "contributionsOn": "Contributions on {{project}}"
+  },
+  "articleStats": {
+    "title": "Status of created Wikipedia pages",
+    "period": "Creations by retained accounts from {{start}} through {{end}} (UTC), using the current filters.",
+    "total": "Identified creations during the period: {{count}}.",
+    "online": "Pages still publicly accessible: {{count}}.",
+    "deleted": "Deleted original pages: {{count}}.",
+    "unknown": "Status not confirmed: {{count}}.",
+    "recreated": "Among deleted creations, titles reused by a new page: {{count}} (already included in deletions).",
+    "otherPages": "Among accessible pages, redirects or disambiguation pages: {{count}}.",
+    "checked": "Last checked: {{date}} UTC.",
+    "help": "Status describes the situation when checked, not at the end of the observation period. An accessible page is not necessarily eligible for inclusion in Wikipedia. A reused title refers to a new page and does not prove the original article was restored. This public check does not use the topic model.",
+    "progress": "Checking page status: {{done}} of {{total}}.",
+    "refresh": "Refresh page status",
+    "unavailableHelp": "Some pages could not be checked, or their public history does not confirm their state. They count as neither accessible nor deleted. You can refresh the check.",
+    "unconfirmedPages": "View pages with unconfirmed status"
   }
 }
