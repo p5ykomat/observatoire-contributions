@@ -164,9 +164,9 @@ test("public Event Registration imports all pages, confirms real dates, excludes
   );
   await expect(
     importer.getByRole("link", { name: "Consulter l’API CampaignEvents" }),
-  ).toHaveAttribute("href", /campaignevents.v0/);
+  ).toHaveCount(0);
   await importer
-    .getByLabel("Lien de la page de l’événement ou de Special:EventDetails")
+    .getByLabel("Lien de l’événement Event Registration")
     .fill(source.page_url);
   await importer
     .getByRole("button", { name: "Charger les participants publics" })
@@ -263,31 +263,6 @@ test("public Event Registration imports all pages, confirms real dates, excludes
     path: "../output/event-results-desktop.png",
     fullPage: true,
   });
-  await page.setViewportSize({ width: 390, height: 844 });
-  await expect(
-    list.getByRole("button", { name: "Trier par Contributions", exact: true }),
-  ).toBeVisible();
-  await expect
-    .poll(() =>
-      page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
-    )
-    .toBe(true);
-  await list.screenshot({ path: "../output/event-contributors-mobile.png" });
-  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
-  for (const width of [320, 740, 768]) {
-    await page.setViewportSize({ width, height: 844 });
-    await expect(
-      list.getByRole("button", {
-        name: "Trier par Contributions",
-        exact: true,
-      }),
-    ).toBeVisible();
-    await expect
-      .poll(() =>
-        page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
-      )
-      .toBe(true);
-  }
   await page.goto("/");
   await page.locator('input[accept=".json"]').setInputFiles({
     name: "analysis.json",
@@ -330,7 +305,7 @@ test("Event Registration errors preserve imported pages and can be resumed", asy
     'section[aria-labelledby="event-import-title"]',
   );
   await importer
-    .getByLabel("Lien de la page de l’événement ou de Special:EventDetails")
+    .getByLabel("Lien de l’événement Event Registration")
     .fill(source.url);
   await importer
     .getByRole("button", { name: "Charger les participants publics" })

@@ -155,7 +155,6 @@ it("un périmètre non collecté ou des paramètres modifiés ne sont pas des er
   const notices = resultNotices(s, analyzeFollowup(s));
   expect(notices.map((n) => n.key)).toEqual([
     "fup.missingScope",
-    "fup.changedCollection",
   ]);
   expect(notices.every((n) => !n.error && !n.accounts.length)).toBe(true);
 });

@@ -9,7 +9,6 @@ import {
   creationType,
   summarizeArticles,
   type ArticleKind,
-  type TopicMetric,
 } from "../analysis/articleTopics";
 import { api, retry } from "../api";
 import { download } from "../exports";
@@ -21,12 +20,16 @@ export function WikipediaTopics({
 }: {
   session: Session;
   result: FollowupResult;
-  save: (cache: Record<string, ArticleTopics>) => void;
+  save: (cache: Record<string, ArticleTopics>, kind: ArticleKind) => void;
 }) {
   const { t, i18n } = useTranslation();
   const [open, setOpen] = useState(false);
-  const [kind, setKind] = useState<ArticleKind>("creation");
-  const [metric, setMetric] = useState<TopicMetric>("contributors");
+  const [kind, setKind] = useState<ArticleKind>(
+    session.article_topics_kind ?? "creation",
+  );
+  const metric = "articles";
+  const kindRef = useRef(kind);
+  kindRef.current = kind;
   const [detailed, setDetailed] = useState(false);
   const [cache, setCache] = useState(session.article_topics ?? {});
   const [progress, setProgress] = useState<{
@@ -58,6 +61,7 @@ export function WikipediaTopics({
     controller.current?.abort();
     setRunning(false);
     setProgress(null);
+    setOpen(false);
   }, [queryKey, kind]);
   const summary = useMemo(
     () => summarizeArticles(edits, cache, kind, metric, detailed),
@@ -81,7 +85,7 @@ export function WikipediaTopics({
       cache[articleKey(edit)].status === "unavailable" ||
       (kind !== "creation" && cache[articleKey(edit)].model_skipped),
   );
-  async function run() {
+  async function run(reset = false) {
     setOpen(true);
     if (controller.current && !controller.current.signal.aborted) return;
     const abort = new AbortController();
@@ -95,6 +99,13 @@ export function WikipediaTopics({
         byArticle.set(key, edit);
     }
     const articles = [...byArticle.entries()];
+    if (reset) {
+      const keys = new Set(articles.map(([key]) => key));
+      values.current = Object.fromEntries(
+        Object.entries(values.current).filter(([key]) => !keys.has(key)),
+      );
+      setCache(values.current);
+    }
     let done = articles.filter(
       ([key]) =>
         values.current[key] &&
@@ -162,291 +173,254 @@ export function WikipediaTopics({
       if (alive.current && controller.current === abort) {
         controller.current = null;
         setRunning(false);
-        saveRef.current(values.current);
+        saveRef.current(values.current, kindRef.current);
       }
     }
   }
   return (
     <section className="panel wikipedia-topics" aria-labelledby="topics-title">
-      <h2 id="topics-title">{t("topics.title")}</h2>
-      <p>{t("topics.intro")}</p>
-      <p className="hint">{t("topics.independent")}</p>
-      <details className="topic-method">
-        <summary>{t("topics.methodTitle")}</summary>
-        <p>{t("topics.method")}</p>
-        <p>{t("topics.methodLimits")}</p>
-        <p>{t("topics.enterprise")}</p>
-        <p>
+      <details className="topics-disclosure">
+        <summary>
+          <h2 id="topics-title">{t("topics.title")}</h2>
+        </summary>
+        <p>{t("topics.intro")}</p>
+        <p className="hint">{t("topics.independent")}</p>
+        <details className="topic-method">
+          <summary>{t("topics.methodTitle")}</summary>
+          <p>{t("topics.method")}</p>
+          <p>{t("topics.methodLimits")}</p>
+          <p>{t("topics.enterprise")}</p>
+          <p>
+            <a
+              href="https://meta.wikimedia.org/wiki/Wikimedia_Enterprise/Access"
+              target="_blank"
+              rel="noreferrer"
+            >
+              {t("topics.enterpriseLink")}
+            </a>
+          </p>
           <a
-            href="https://meta.wikimedia.org/wiki/Wikimedia_Enterprise/Access"
+            href="https://meta.wikimedia.org/wiki/Machine_learning_models/Production/Language_agnostic_link-based_article_topic"
             target="_blank"
             rel="noreferrer"
           >
-            {t("topics.enterpriseLink")}
+            {t("topics.modelLink")}
           </a>
-        </p>
-        <a
-          href="https://meta.wikimedia.org/wiki/Machine_learning_models/Production/Language_agnostic_link-based_article_topic"
-          target="_blank"
-          rel="noreferrer"
-        >
-          {t("topics.modelLink")}
-        </a>
-      </details>
-      <div className="settings-grid">
-        <label>
-          <span id="topics-kind-label">{t("topics.kind")}</span>
-          <select
-            aria-labelledby="topics-kind-label"
-            value={kind}
-            onChange={(e) => setKind(e.target.value as ArticleKind)}
-          >
-            {(["both", "creation", "modification"] as const).map((v) => (
-              <option key={v} value={v}>
-                {t("topics.kinds." + v)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          <span id="topics-metric-label">{t("topics.metric")}</span>
-          <select
-            aria-labelledby="topics-metric-label"
-            value={metric}
-            onChange={(e) => setMetric(e.target.value as TopicMetric)}
-          >
-            {(["contributors", "articles", "edits"] as const).map((v) => (
-              <option key={v} value={v}>
-                {t("topics.metrics." + v)}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-      <div className="actions">
-        <button
-          className="primary"
-          aria-expanded={open}
-          aria-controls={open ? "topic-analysis-content" : undefined}
-          disabled={running || !edits.length || (open && !needsWork)}
-          onClick={() => void run()}
-        >
-          {t(
-            open
-              ? needsWork
-                ? "topics.resume"
-                : "topics.complete"
-              : "topics.launch",
-          )}
-        </button>
-        {running && (
-          <button onClick={() => controller.current?.abort()}>
-            {t("pause")}
-          </button>
-        )}
-        {open && (
-          <button
-            aria-expanded={open}
-            onClick={() => {
-              controller.current?.abort();
-              setOpen(false);
-            }}
-          >
-            {t("topics.hide")}
-          </button>
-        )}
-      </div>
-      {!edits.length && <p className="hint">{t("topics.empty")}</p>}
-      {open && (
-        <div id="topic-analysis-content">
-          {!result.complete && <p className="notice">{t("topics.partial")}</p>}
-          {progress && <p role="status">{t("topics.progress", progress)}</p>}
-          {running && (
-            <progress
-              aria-label={t("topics.progressLabel")}
-              max={progress?.total || 1}
-              value={progress?.done ?? 0}
-            />
-          )}
-          <p className="hint">{t("topics.period")}</p>
-          <p className="notice">
-            {t("topics.answer", {
-              contributors: number(summary.contributors),
-              total: number(result.n),
-              rate: share(summary.contributors, result.n),
-              articles: number(summary.articles),
-              edits: number(summary.selected.length),
-            })}
-          </p>
-          <h3>{t("topics.volumeTitle")}</h3>
-          <div
-            className="table-scroll"
-            tabIndex={0}
-            role="region"
-            aria-label={t("topics.volumeTitle")}
-          >
-            <table>
-              <caption>{t("topics.volumeCaption")}</caption>
-              <thead>
-                <tr>
-                  <th>{t("topics.kind")}</th>
-                  <th>{t("count")}</th>
-                  <th>{t("topics.share")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[
-                  ["creation", summary.creations],
-                  ["modification", summary.modifications],
-                  ["unknown", summary.unknownType],
-                ].map(([label, count]) => (
-                  <tr key={label}>
-                    <th scope="row">{t("topics.kinds." + label)}</th>
-                    <td>{number(Number(count))}</td>
-                    <td>{share(Number(count), summary.eligible.length)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {summary.unknownType > 0 && (
-            <p className="hint">{t("topics.unknownType")}</p>
-          )}
-          <h3>{t("topics.ranking")}</h3>
-          <label className="check">
-            <input
-              type="checkbox"
-              checked={detailed}
-              onChange={(e) => setDetailed(e.target.checked)}
-            />
-            {t("topics.detailed")}
+        </details>
+        <div className="settings-grid">
+          <label>
+            <span id="topics-kind-label">{t("topics.kind")}</span>
+            <select
+              aria-labelledby="topics-kind-label"
+              value={kind}
+              onChange={(e) => {
+                const next = e.target.value as ArticleKind;
+                setKind(next);
+                saveRef.current(values.current, next);
+              }}
+            >
+              {(["both", "creation", "modification"] as const).map((v) => (
+                <option key={v} value={v}>
+                  {t("topics.kinds." + v)}
+                </option>
+              ))}
+            </select>
           </label>
-          <p className="hint">
-            {t("topics.base." + metric, { count: number(summary.base) })}{" "}
-            {t("topics.overlap")}
-          </p>
-          <p role="status">
-            {t("topics.coverage", {
-              classified: number(summary.classified),
-              total: number(summary.articles),
-              rate: share(summary.classified, summary.articles),
-              unclassified: number(summary.unclassified),
-              unavailable: number(summary.unavailable),
-              pending: number(summary.pending),
-            })}
-          </p>
-          {summary.unavailable > 0 && (
-            <p className="notice">{t("topics.unavailable")}</p>
+        </div>
+        <div className="actions">
+          <button
+            className="primary"
+            aria-expanded={open}
+            aria-controls={open ? "topic-analysis-content" : undefined}
+            disabled={running || !edits.length || (open && !needsWork)}
+            onClick={() => void run()}
+          >
+            {t(
+              open
+                ? needsWork
+                  ? "topics.resume"
+                  : "topics.complete"
+                : "topics.launch",
+            )}
+          </button>
+          {running && (
+            <button onClick={() => controller.current?.abort()}>
+              {t("pause")}
+            </button>
           )}
-          {summary.deleted > 0 && (
-            <p className="hint">
-              {t("topics.deleted", { count: summary.deleted })}
-            </p>
-          )}
-          {summary.excluded > 0 && (
-            <p className="hint">
-              {t("topics.excluded", { count: summary.excluded })}
-            </p>
-          )}
-          {summary.rows.length ? (
-            <>
-              <ol className="topic-bars" aria-label={t("topics.ranking")}>
-                {summary.rows.slice(0, 10).map((row) => (
-                  <li key={row.topic}>
-                    <span className="topic-name">{topicLabel(row.topic)}</span>
-                    <span className="topic-bar-track" aria-hidden="true">
-                      <span style={{ width: row.percent + "%" }} />
-                    </span>
-                    <strong>
-                      {number(row.count)} ({number(row.percent)} %)
-                    </strong>
-                  </li>
-                ))}
-              </ol>
-              <details>
-                <summary>{t("topics.allThemes")}</summary>
-                <div
-                  className="table-scroll"
-                  tabIndex={0}
-                  role="region"
-                  aria-label={t("topics.ranking")}
-                >
-                  <table>
-                    <caption>{t("topics.ranking")}</caption>
-                    <thead>
-                      <tr>
-                        <th>{t("topics.theme")}</th>
-                        <th>{t("count")}</th>
-                        <th>{t("topics.share")}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {summary.rows.map((row) => (
-                        <tr key={row.topic}>
-                          <th scope="row">{topicLabel(row.topic)}</th>
-                          <td>{number(row.count)}</td>
-                          <td>{number(row.percent)} %</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </details>
-              <button
-                onClick={() =>
-                  download(
-                    new Blob(
-                      [
-                        "\ufeff" +
-                          Papa.unparse(
-                            summary.rows.map((row) => ({
-                              theme: topicLabel(row.topic),
-                              metric,
-                              kind,
-                              count: row.count,
-                              percent: row.percent,
-                              base: summary.base,
-                              model: "outlink-topic-model",
-                              threshold: 0.5,
-                              period_start: result.start,
-                              period_end: result.observedEnd,
-                              observation_mode:
-                                session.params.observation?.mode ??
-                                "after_event",
-                              wikipedia_languages:
-                                result.question.wikipedia_languages.join("|"),
-                              projects:
-                                result.question.projects?.join("|") ??
-                                "selected_families",
-                              classified_articles: summary.classified,
-                              unclassified_articles: summary.unclassified,
-                              unavailable_articles: summary.unavailable,
-                              pending_articles: summary.pending,
-                              deleted_articles_without_topic: summary.deleted,
-                              include_deleted_creations:
-                                result.question.include_deleted_creations !==
-                                false,
-                              include_deleted_modifications:
-                                result.question
-                                  .include_deleted_modifications !== false,
-                            })),
-                            { escapeFormulae: true },
-                          ),
-                      ],
-                      { type: "text/csv;charset=utf-8" },
-                    ),
-                    "thematiques-wikipedia.csv",
-                  )
-                }
-              >
-                {t("topics.export")}
-              </button>
-            </>
-          ) : (
-            <p className="hint">{t("topics.noThemes")}</p>
+          {open && (
+            <button
+              disabled={running || !candidates.length}
+              onClick={() => void run(true)}
+            >
+              {t("topics.restart")}
+            </button>
           )}
         </div>
-      )}
+        {!edits.length && <p className="hint">{t("topics.empty")}</p>}
+        <p className="hint">{t("topics.actionsHelp")}</p>
+        {open && (
+          <div id="topic-analysis-content">
+            {!result.complete && (
+              <p className="notice">{t("topics.partial")}</p>
+            )}
+            {progress && <p role="status">{t("topics.progress", progress)}</p>}
+            {running && (
+              <progress
+                aria-label={t("topics.progressLabel")}
+                max={progress?.total || 1}
+                value={progress?.done ?? 0}
+              />
+            )}
+            <p className="hint">{t("topics.period")}</p>
+            <p className="hint">{t("topics.examinedHelp")}</p>
+            <p className="notice">
+              {t("topics.answer", {
+                contributors: number(summary.contributors),
+                total: number(result.n),
+                rate: share(summary.contributors, result.n),
+                articles: number(summary.articles),
+                edits: number(summary.selected.length),
+              })}
+            </p>
+            <h3>{t("topics.ranking")}</h3>
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={detailed}
+                onChange={(e) => setDetailed(e.target.checked)}
+              />
+              {t("topics.detailed")}
+            </label>
+            <p className="hint">
+              {t("topics.base." + metric, { count: number(summary.base) })}{" "}
+              {t("topics.overlap")}
+            </p>
+            <p role="status">
+              {t("topics.coverage", {
+                classified: number(summary.classified),
+                total: number(summary.articles),
+                rate: share(summary.classified, summary.articles),
+                unclassified: number(summary.unclassified),
+                unavailable: number(summary.unavailable),
+                pending: number(summary.pending),
+              })}
+            </p>
+            {summary.unavailable > 0 && (
+              <p className="notice">{t("topics.unavailable")}</p>
+            )}
+            {summary.deleted > 0 && (
+              <p className="hint">
+                {t("topics.deleted", { count: summary.deleted })}
+              </p>
+            )}
+            {summary.excluded > 0 && (
+              <p className="hint">
+                {t("topics.excluded", { count: summary.excluded })}
+              </p>
+            )}
+            {summary.rows.length ? (
+              <>
+                <ol className="topic-bars" aria-label={t("topics.ranking")}>
+                  {summary.rows.slice(0, 10).map((row) => (
+                    <li key={row.topic}>
+                      <span className="topic-name">
+                        {topicLabel(row.topic)}
+                      </span>
+                      <span className="topic-bar-track" aria-hidden="true">
+                        <span style={{ width: row.percent + "%" }} />
+                      </span>
+                      <strong>
+                        {number(row.count)} ({number(row.percent)} %)
+                      </strong>
+                    </li>
+                  ))}
+                </ol>
+                <details>
+                  <summary>{t("topics.allThemes")}</summary>
+                  <div
+                    className="table-scroll"
+                    tabIndex={0}
+                    role="region"
+                    aria-label={t("topics.ranking")}
+                  >
+                    <table>
+                      <caption>{t("topics.ranking")}</caption>
+                      <thead>
+                        <tr>
+                          <th>{t("topics.theme")}</th>
+                          <th>{t("count")}</th>
+                          <th>{t("topics.share")}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {summary.rows.map((row) => (
+                          <tr key={row.topic}>
+                            <th scope="row">{topicLabel(row.topic)}</th>
+                            <td>{number(row.count)}</td>
+                            <td>{number(row.percent)} %</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </details>
+                <button
+                  onClick={() =>
+                    download(
+                      new Blob(
+                        [
+                          "\ufeff" +
+                            Papa.unparse(
+                              summary.rows.map((row) => ({
+                                theme: topicLabel(row.topic),
+                                metric,
+                                kind,
+                                count: row.count,
+                                percent: row.percent,
+                                base: summary.base,
+                                model: "outlink-topic-model",
+                                threshold: 0.5,
+                                period_start: result.start,
+                                period_end: result.observedEnd,
+                                observation_mode:
+                                  session.params.observation?.mode ??
+                                  "after_event",
+                                wikipedia_languages:
+                                  result.question.wikipedia_languages.join("|"),
+                                projects:
+                                  result.question.projects?.join("|") ??
+                                  "selected_families",
+                                classified_articles: summary.classified,
+                                unclassified_articles: summary.unclassified,
+                                unavailable_articles: summary.unavailable,
+                                pending_articles: summary.pending,
+                                deleted_articles_without_topic: summary.deleted,
+                                include_deleted_creations:
+                                  result.question.include_deleted_creations !==
+                                  false,
+                                include_deleted_modifications:
+                                  result.question
+                                    .include_deleted_modifications !== false,
+                              })),
+                              { escapeFormulae: true },
+                            ),
+                        ],
+                        { type: "text/csv;charset=utf-8" },
+                      ),
+                      "thematiques-wikipedia.csv",
+                    )
+                  }
+                >
+                  {t("topics.export")}
+                </button>
+              </>
+            ) : (
+              <p className="hint">{t("topics.noThemes")}</p>
+            )}
+          </div>
+        )}
+      </details>
     </section>
   );
 }

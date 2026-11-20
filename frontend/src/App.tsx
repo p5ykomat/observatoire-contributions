@@ -37,6 +37,7 @@ import {
   type RegistrationImport,
 } from "./registrationImporter";
 import { defaultQuestion } from "./types";
+import { analyzeFollowup } from "./analysis/followup";
 import { parseCohortCSV, cohortFileDates } from "./cohortFiles";
 interface Dashboard {
   title: string;
@@ -263,13 +264,15 @@ export default function App() {
         }),
       );
   }
-  async function launch(recollect = false) {
+  async function launch(recollect = false, requested?: Partial<Params>) {
     if (providedDates && !dateChoice) throw new Error(t("confirmEventDates"));
     validateDates();
     if (!aggregate(s).n) throw new Error(t("zeroSelection"));
     const session = structuredClone(s);
+    session.params = { ...session.params, ...requested };
     session.stage = 3;
-    session.params.reference = session.params.observation?.end ?? today();
+    session.params.reference =
+      session.params.observation?.end ?? requested?.reference ?? today();
     const current = generation.current;
     const engine = new Collector(session, (value, progress) => {
       if (current === generation.current) {
@@ -1203,23 +1206,32 @@ export default function App() {
                 toggle={toggle}
                 setQuestion={(question) => update({ question })}
                 setParams={params}
-                saveTopics={(article_topics) => update({ article_topics })}
-                recollect={() =>
-                  update({
-                    params: { ...s.params, scope: "all", reference: today() },
-                    stage: 2,
-                  })
+                saveTopics={(article_topics, article_topics_kind) =>
+                  update({ article_topics, article_topics_kind })
                 }
+                recollect={() => {
+                  const result = analyzeFollowup(s);
+                  void perform(() =>
+                    launch(true, {
+                      reference:
+                        result.end && result.end < today()
+                          ? result.end
+                          : today(),
+                      ...(!result.scopeCovered
+                        ? {
+                            scope:
+                              result.question.families.includes("*") &&
+                              !result.question.projects
+                                ? "all"
+                                : "custom",
+                            projects: result.projects.map((p) => p.id),
+                          }
+                        : {}),
+                    }),
+                  );
+                }}
               />
             </Suspense>
-            {!result.complete && (
-              <button
-                disabled={busy}
-                onClick={() => void perform(() => launch(true))}
-              >
-                {t("retry")}
-              </button>
-            )}
             <button onClick={() => update({ stage: 2 })}>{t("steps.1")}</button>
           </>
         )}

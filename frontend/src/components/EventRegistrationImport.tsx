@@ -62,13 +62,6 @@ export function EventRegistrationImport({
       <p id="event-import-privacy" className="hint">
         {t("eventRegistration.privacy")}
       </p>
-      <a
-        href="https://www.mediawiki.org/w/index.php?api=campaignevents.v0&title=Special:RestSandbox"
-        target="_blank"
-        rel="noreferrer"
-      >
-        {t("eventRegistration.apiLink")}
-      </a>
       <p role="status">
         {state
           ? t(

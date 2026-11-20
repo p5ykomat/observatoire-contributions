@@ -184,6 +184,8 @@ const schema = z.object({
   application_version: z.literal("1.0.0"),
   generated_at: z.string(),
   params: paramsSchema,
+  collection_params: paramsSchema.optional(),
+  article_topics_kind: z.enum(["creation", "modification", "both"]).optional(),
   cohort: z.array(accountSchema).max(100000),
   edits: z.array(editSchema).max(2000000),
   catalog: z.array(

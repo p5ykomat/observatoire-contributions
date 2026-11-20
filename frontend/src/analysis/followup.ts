@@ -1,5 +1,6 @@
 import { defaultQuestion, today, type Session, type Project } from "../types";
-import { dateMs, DAY, segment, selected, signature } from "./cohorts";
+import { dateMs, DAY, segment, selected } from "./cohorts";
+import { collectionBounds } from "./coverage";
 import { isMessage } from "../i18n";
 
 export const wikipediaLanguage = (project: Project) =>
@@ -33,7 +34,10 @@ export function analyzeFollowup(s: Session) {
           : (s.new_accounts?.start ?? s.params.start),
       )
     : dateMs(s.params.end) + DAY;
-  const reference = dateMs(s.params.reference);
+  const coverage = collectionBounds(s);
+  const reference = Number.isFinite(coverage.end)
+    ? coverage.end
+    : dateMs(s.params.reference);
   const deadline = observation
     ? dateMs(observation.end)
     : q.days === "today"
@@ -61,12 +65,14 @@ export function analyzeFollowup(s: Session) {
       project.family !== "wikipedia" || q.wikipedia_categories.length > 0,
   );
   const collected = new Set(
-    s.params.scope === "origin" ? s.params.origins : s.params.projects,
+    coverage.params?.scope === "origin"
+      ? coverage.params.origins
+      : (coverage.params?.projects ?? []),
   );
   const scopeCovered =
-    s.params.scope === "all" ||
+    coverage.params?.scope === "all" ||
     projects.every((project) => collected.has(project.id));
-  const sameScope = s.collection_signature === signature(s.params);
+  const sameScope = Boolean(coverage.params) && startMs >= coverage.start;
   const catalog = new Map(s.catalog.map((project) => [project.id, project]));
   const buckets = new Map<string, Session["edits"]>();
   for (const edit of s.edits) {
@@ -254,6 +260,9 @@ export function analyzeFollowup(s: Session) {
     end: valid ? new Date(deadline).toISOString().slice(0, 10) : null,
     observedEnd: valid
       ? new Date(observedEnd).toISOString().slice(0, 10)
+      : null,
+    collectedUntil: Number.isFinite(reference)
+      ? new Date(reference).toISOString().slice(0, 10)
       : null,
     rows,
     included,

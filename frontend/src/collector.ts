@@ -326,6 +326,7 @@ export class Collector {
     // start at the beginning rather than inherit another account's cursor.
     this.session.queue = [...resumed, ...batches];
     this.session.collection_signature = signature(p);
+    this.session.collection_params = structuredClone(p);
     this.session.deleted_collection_version = 1;
     this.session.generated_at = new Date().toISOString();
     this.preparation = null;

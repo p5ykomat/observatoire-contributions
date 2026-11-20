@@ -8,7 +8,12 @@ import {
 import { exportCSV, exportJSON, exportPDF, exportCohort } from "../exports";
 import { resultNotices } from "../analysis/resultNotices";
 import { isMessage, translateMessage } from "../i18n";
-import { CATEGORIES, type FollowupQuestion, type Session } from "../types";
+import {
+  CATEGORIES,
+  today,
+  type FollowupQuestion,
+  type Session,
+} from "../types";
 import { contributionLinks } from "../analysis/contributionLinks";
 import { Chart } from "./Chart";
 import { ObservationSettings } from "./ObservationSettings";
@@ -16,6 +21,10 @@ import { registrationSummary } from "../analysis/registrationSummary";
 import type { Params } from "../types";
 import type { ArticleTopics } from "../types";
 import { WikipediaTopics } from "./WikipediaTopics";
+import { ContributionAnalysis } from "./ContributionAnalysis";
+import { ContributionCalendar } from "./ContributionCalendar";
+import { KeyFigures } from "./KeyFigures";
+import { observedContributions, projectActivity } from "../analysis/activity";
 
 export function Results({
   session,
@@ -30,7 +39,10 @@ export function Results({
   setQuestion: (question: FollowupQuestion) => void;
   setParams: (params: Partial<Params>) => void;
   recollect: () => void;
-  saveTopics: (cache: Record<string, ArticleTopics>) => void;
+  saveTopics: (
+    cache: Record<string, ArticleTopics>,
+    kind: "creation" | "modification" | "both",
+  ) => void;
 }) {
   const { t, i18n } = useTranslation();
   const [nominative, setNominative] = useState(false);
@@ -42,7 +54,22 @@ export function Results({
   const [sort, setSort] = useState("contributions_desc");
   const r = useMemo(() => analyzeFollowup(session), [session]);
   const q = r.question;
+  const contributions = useMemo(() => observedContributions(r), [r]);
   const notices = resultNotices(session, r);
+  const needsArchives =
+    r.projects.some((p) => p.family === "wikipedia") &&
+    q.wikipedia_categories.includes("CONTENT") &&
+    (q.include_deleted_creations || q.include_deleted_modifications);
+  const needsCollection =
+    r.valid &&
+    r.enabled &&
+    r.n > 0 &&
+    (!r.collection.current ||
+      !r.scopeCovered ||
+      (r.collectedUntil ?? "") < (r.end! < today() ? r.end! : today()) ||
+      r.collection.completed < r.n ||
+      (needsArchives &&
+        (!r.deleted.collected || r.deleted.incomplete.length > 0)));
   const change = (patch: Partial<FollowupQuestion>) =>
     setQuestion({ ...q, ...patch });
   const families = [...new Set(session.catalog.map((p) => p.family))].sort();
@@ -217,238 +244,242 @@ export function Results({
         <h2 id="question-title">
           {t(session.new_accounts ? "newAccounts.resultTitle" : "fup.title")}
         </h2>
-        {session.new_accounts ? (
-          <ObservationSettings
-            session={session}
-            change={setParams}
-            question={setQuestion}
-          />
-        ) : (
-          <>
-            <p>{t("fup.help")}</p>
-            <fieldset>
-              <legend>{t("fup.deadline")}</legend>
-              <div className="actions deadline-buttons">
-                {([30, 60, 90, 120, 365, "today"] as const).map((days) => (
-                  <button
-                    key={days}
-                    aria-pressed={q.days === days}
-                    onClick={() => change({ days })}
-                  >
-                    {days === "today"
-                      ? t("fup.today")
-                      : t("dayAfter", { day: days })}
-                  </button>
-                ))}
-              </div>
-              <p className="hint" id="deadline-help">
-                {t("fup.deadlineHelp")}
-              </p>
-              <label className="custom-days">
-                {t("fup.customDays")}
-                <input
-                  type="number"
-                  min={1}
-                  max={36500}
-                  aria-describedby="deadline-help"
-                  value={q.days === "today" ? "" : q.days}
-                  onChange={(e) => change({ days: Number(e.target.value) })}
-                />
-              </label>
-            </fieldset>
-            <p className="query-period" role="status">
-              {r.valid
-                ? t("fup.interval", { start: r.start!, end: r.end! })
-                : t("fup.invalid")}
-            </p>
-            <div className="settings-grid">
+        <p className="results-exploration-help">{t("activity.explore")}</p>
+        <details className="results-settings">
+          <summary>{t("activity.settings")}</summary>
+          {session.new_accounts ? (
+            <ObservationSettings
+              session={session}
+              change={setParams}
+              question={setQuestion}
+            />
+          ) : (
+            <>
+              <p>{t("fup.help")}</p>
               <fieldset>
-                <legend>{t("fup.projects")}</legend>
-                <label className="check">
-                  <input
-                    type="checkbox"
-                    checked={q.families.includes("*")}
-                    onChange={(e) =>
-                      change({ families: e.target.checked ? ["*"] : [] })
-                    }
-                  />
-                  {t("fup.allFamilies")}
-                </label>
-                <div className="checks">
-                  {["wikipedia", "commons", "wikidata"]
-                    .filter((f) => families.includes(f))
-                    .map(familyCheck)}
-                </div>
-                <details>
-                  <summary>{t("fup.otherProjects")}</summary>
-                  <div className="checks">
-                    {families
-                      .filter(
-                        (f) =>
-                          !["wikipedia", "commons", "wikidata"].includes(f),
-                      )
-                      .map(familyCheck)}
-                  </div>
-                </details>
-                <p className="hint">{t("fup.projectHelp")}</p>
-              </fieldset>
-              {(q.families.includes("*") ||
-                q.families.includes("wikipedia")) && (
-                <fieldset>
-                  <legend>{t("fup.languages")}</legend>
-                  <div className="checks">
-                    {["fr", "en"]
-                      .filter((code) => languages.includes(code))
-                      .map(languageCheck)}
-                  </div>
-                  <details>
-                    <summary>{t("fup.otherLanguages")}</summary>
-                    <p className="hint">{t("fup.languageHelp")}</p>
-                    <label>
-                      {t("fup.languageSearch")}
-                      <input
-                        value={languageSearch}
-                        onChange={(e) => setLanguageSearch(e.target.value)}
-                      />
-                    </label>
-                    <label className="check">
-                      <input
-                        type="checkbox"
-                        checked={q.wikipedia_languages.includes("*")}
-                        onChange={(e) =>
-                          change({
-                            wikipedia_languages: e.target.checked
-                              ? ["*"]
-                              : ["fr", "en"],
-                          })
-                        }
-                      />
-                      {t("fup.allLanguages")}
-                    </label>
-                    <div className="checks language-list">
-                      {languages
-                        .filter(
-                          (code) =>
-                            !["fr", "en"].includes(code) &&
-                            languageName(code)
-                              .toLocaleLowerCase()
-                              .includes(languageSearch.toLocaleLowerCase()),
-                        )
-                        .map(languageCheck)}
-                    </div>
-                  </details>
-                </fieldset>
-              )}
-            </div>
-            {(q.families.includes("*") || q.families.includes("wikipedia")) && (
-              <details className="wiki-categories">
-                <summary>{t("fup.wikipediaCategories")}</summary>
-                <p>{t("fup.categoriesHelp")}</p>
-                <div className="checks">
-                  {CATEGORIES.filter(
-                    (category) =>
-                      !["STRUCTURED_DATA", "MEDIA"].includes(category),
-                  ).map((category) => (
-                    <label key={category}>
-                      <input
-                        type="checkbox"
-                        checked={q.wikipedia_categories.includes(category)}
-                        onChange={() =>
-                          change({
-                            wikipedia_categories:
-                              q.wikipedia_categories.includes(category)
-                                ? q.wikipedia_categories.filter(
-                                    (c) => c !== category,
-                                  )
-                                : [...q.wikipedia_categories, category],
-                          })
-                        }
-                      />
-                      <span>
-                        {t("category." + category)}
-                        <small className="category-example">
-                          {t("categoryExamples." + category)}
-                        </small>
-                      </span>
-                    </label>
+                <legend>{t("fup.deadline")}</legend>
+                <div className="actions deadline-buttons">
+                  {([30, 60, 90, 120, 365, "today"] as const).map((days) => (
+                    <button
+                      key={days}
+                      aria-pressed={q.days === days}
+                      onClick={() => change({ days })}
+                    >
+                      {days === "today"
+                        ? t("fup.today")
+                        : t("dayAfter", { day: days })}
+                    </button>
                   ))}
                 </div>
-              </details>
-            )}
-            <p className="hint">{t("fup.otherCategories")}</p>
-          </>
-        )}
-        {r.projects.some((project) => project.family === "wikipedia") && (
-          <fieldset className="deleted-controls">
-            <legend>{t("deleted.title")}</legend>
-            <label className="check">
-              <input
-                type="checkbox"
-                checked={q.include_deleted_creations !== false}
-                onChange={(event) =>
-                  change({ include_deleted_creations: event.target.checked })
-                }
-              />
-              {t("deleted.includeCreations")}
-            </label>
-            <label className="check">
-              <input
-                type="checkbox"
-                checked={q.include_deleted_modifications !== false}
-                onChange={(event) =>
-                  change({
-                    include_deleted_modifications: event.target.checked,
-                  })
-                }
-              />
-              {t("deleted.includeModifications")}
-            </label>
-            <p className="hint">{t("deleted.help")}</p>
-            {r.deleted.collected ? (
-              <>
-                <p role="status">
-                  {t("deleted.counts", {
-                    creations: r.deleted.creations,
-                    modifications: r.deleted.modifications,
-                  })}
+                <p className="hint" id="deadline-help">
+                  {t("fup.deadlineHelp")}
                 </p>
-                {r.deleted.unknown > 0 && (
-                  <p className="hint">
-                    {t("deleted.unknown", { count: r.deleted.unknown })}
-                  </p>
-                )}
-                {r.deleted.incomplete.length > 0 && (
-                  <div className="notice" role="status">
-                    <p>
-                      {t("deleted.incomplete", {
-                        count: r.deleted.incomplete.length,
-                      })}
-                    </p>
-                    <details>
-                      <summary>{t("fup.affectedAccounts")}</summary>
-                      <ul>
-                        {r.deleted.incomplete.map((name) => (
-                          <li key={name}>{name}</li>
-                        ))}
-                      </ul>
-                    </details>
-                    <button onClick={recollect}>{t("fup.recollect")}</button>
+                <label className="custom-days">
+                  {t("fup.customDays")}
+                  <input
+                    type="number"
+                    min={1}
+                    max={36500}
+                    aria-describedby="deadline-help"
+                    value={q.days === "today" ? "" : q.days}
+                    onChange={(e) => change({ days: Number(e.target.value) })}
+                  />
+                </label>
+              </fieldset>
+              <p className="query-period" role="status">
+                {r.valid
+                  ? t("fup.interval", { start: r.start!, end: r.end! })
+                  : t("fup.invalid")}
+              </p>
+              <div className="settings-grid">
+                <fieldset>
+                  <legend>{t("fup.projects")}</legend>
+                  <label className="check">
+                    <input
+                      type="checkbox"
+                      checked={q.families.includes("*")}
+                      onChange={(e) =>
+                        change({ families: e.target.checked ? ["*"] : [] })
+                      }
+                    />
+                    {t("fup.allFamilies")}
+                  </label>
+                  <div className="checks">
+                    {["wikipedia", "commons", "wikidata"]
+                      .filter((f) => families.includes(f))
+                      .map(familyCheck)}
                   </div>
+                  <details>
+                    <summary>{t("fup.otherProjects")}</summary>
+                    <div className="checks">
+                      {families
+                        .filter(
+                          (f) =>
+                            !["wikipedia", "commons", "wikidata"].includes(f),
+                        )
+                        .map(familyCheck)}
+                    </div>
+                  </details>
+                  <p className="hint">{t("fup.projectHelp")}</p>
+                </fieldset>
+                {(q.families.includes("*") ||
+                  q.families.includes("wikipedia")) && (
+                  <fieldset>
+                    <legend>{t("fup.languages")}</legend>
+                    <div className="checks">
+                      {["fr", "en"]
+                        .filter((code) => languages.includes(code))
+                        .map(languageCheck)}
+                    </div>
+                    <details>
+                      <summary>{t("fup.otherLanguages")}</summary>
+                      <p className="hint">{t("fup.languageHelp")}</p>
+                      <label>
+                        {t("fup.languageSearch")}
+                        <input
+                          value={languageSearch}
+                          onChange={(e) => setLanguageSearch(e.target.value)}
+                        />
+                      </label>
+                      <label className="check">
+                        <input
+                          type="checkbox"
+                          checked={q.wikipedia_languages.includes("*")}
+                          onChange={(e) =>
+                            change({
+                              wikipedia_languages: e.target.checked
+                                ? ["*"]
+                                : ["fr", "en"],
+                            })
+                          }
+                        />
+                        {t("fup.allLanguages")}
+                      </label>
+                      <div className="checks language-list">
+                        {languages
+                          .filter(
+                            (code) =>
+                              !["fr", "en"].includes(code) &&
+                              languageName(code)
+                                .toLocaleLowerCase()
+                                .includes(languageSearch.toLocaleLowerCase()),
+                          )
+                          .map(languageCheck)}
+                      </div>
+                    </details>
+                  </fieldset>
                 )}
-                {r.deleted.unclassified.length > 0 && r.deleted.unknown > 0 && (
-                  <p className="hint">
-                    {t("deleted.classificationIncomplete")}
-                  </p>
-                )}
-              </>
-            ) : (
-              <div className="notice">
-                <p>{t("deleted.oldArchive")}</p>
-                <button onClick={recollect}>{t("fup.recollect")}</button>
               </div>
-            )}
-          </fieldset>
-        )}
+              {(q.families.includes("*") ||
+                q.families.includes("wikipedia")) && (
+                <details className="wiki-categories">
+                  <summary>{t("fup.wikipediaCategories")}</summary>
+                  <p>{t("fup.categoriesHelp")}</p>
+                  <div className="checks">
+                    {CATEGORIES.filter(
+                      (category) =>
+                        !["STRUCTURED_DATA", "MEDIA"].includes(category),
+                    ).map((category) => (
+                      <label key={category}>
+                        <input
+                          type="checkbox"
+                          checked={q.wikipedia_categories.includes(category)}
+                          onChange={() =>
+                            change({
+                              wikipedia_categories:
+                                q.wikipedia_categories.includes(category)
+                                  ? q.wikipedia_categories.filter(
+                                      (c) => c !== category,
+                                    )
+                                  : [...q.wikipedia_categories, category],
+                            })
+                          }
+                        />
+                        <span>
+                          {t("category." + category)}
+                          <small className="category-example">
+                            {t("categoryExamples." + category)}
+                          </small>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </details>
+              )}
+              <p className="hint">{t("fup.otherCategories")}</p>
+            </>
+          )}
+          {r.projects.some((project) => project.family === "wikipedia") && (
+            <fieldset className="deleted-controls">
+              <legend>{t("deleted.title")}</legend>
+              <label className="check">
+                <input
+                  type="checkbox"
+                  checked={q.include_deleted_creations !== false}
+                  onChange={(event) =>
+                    change({ include_deleted_creations: event.target.checked })
+                  }
+                />
+                {t("deleted.includeCreations")}
+              </label>
+              <label className="check">
+                <input
+                  type="checkbox"
+                  checked={q.include_deleted_modifications !== false}
+                  onChange={(event) =>
+                    change({
+                      include_deleted_modifications: event.target.checked,
+                    })
+                  }
+                />
+                {t("deleted.includeModifications")}
+              </label>
+              <p className="hint">{t("deleted.help")}</p>
+              {r.deleted.collected ? (
+                <>
+                  <p role="status">
+                    {t("deleted.counts", {
+                      creations: r.deleted.creations,
+                      modifications: r.deleted.modifications,
+                    })}
+                  </p>
+                  {r.deleted.unknown > 0 && (
+                    <p className="hint">
+                      {t("deleted.unknown", { count: r.deleted.unknown })}
+                    </p>
+                  )}
+                  {r.deleted.incomplete.length > 0 && (
+                    <div className="notice" role="status">
+                      <p>
+                        {t("deleted.incomplete", {
+                          count: r.deleted.incomplete.length,
+                        })}
+                      </p>
+                      <details>
+                        <summary>{t("fup.affectedAccounts")}</summary>
+                        <ul>
+                          {r.deleted.incomplete.map((name) => (
+                            <li key={name}>{name}</li>
+                          ))}
+                        </ul>
+                      </details>
+                    </div>
+                  )}
+                  {r.deleted.unclassified.length > 0 &&
+                    r.deleted.unknown > 0 && (
+                      <p className="hint">
+                        {t("deleted.classificationIncomplete")}
+                      </p>
+                    )}
+                </>
+              ) : (
+                <div className="notice">
+                  <p>{t("deleted.oldArchive")}</p>
+                </div>
+              )}
+            </fieldset>
+          )}
+        </details>
       </section>
       {!r.valid && <p className="notice">{t("fup.invalid")}</p>}
       {!r.enabled && <p className="notice">{t("fup.noProjects")}</p>}
@@ -485,10 +516,11 @@ export function Results({
           )}
         </div>
       ))}
-      {(!r.collection.current ||
-        !r.scopeCovered ||
-        (!r.reached && q.days === "today")) && (
-        <button onClick={recollect}>{t("fup.recollect")}</button>
+      {needsCollection && (
+        <div className="notice collection-action">
+          <p>{t("activity.collectPeriod", { start: r.start!, end: r.end! })}</p>
+          <button onClick={recollect}>{t("fup.recollect")}</button>
+        </div>
       )}
       {r.n === 0 ? (
         <p role="status" className="notice">
@@ -507,7 +539,7 @@ export function Results({
           [t(session.new_accounts ? "newAccounts.retained" : "retained"), r.n],
           [t("fup.contributing"), r.active],
           [t("fup.not_contributing"), r.inactive],
-          [t("fup.unknown"), r.unknown],
+          ...(r.unknown > 0 ? [[t("fup.unknown"), r.unknown]] : []),
           [t("totalEdits"), r.totalEdits],
         ].map(([label, value]) => (
           <div key={label}>
@@ -564,7 +596,9 @@ export function Results({
           points={[
             { label: t("fup.contributing"), value: r.active },
             { label: t("fup.not_contributing"), value: r.inactive },
-            { label: t("fup.unknown"), value: r.unknown },
+            ...(r.unknown > 0
+              ? [{ label: t("fup.unknown"), value: r.unknown }]
+              : []),
           ]}
         />
         <Chart
@@ -584,6 +618,7 @@ export function Results({
           }))}
         />
       </div>
+      <ContributionAnalysis session={session} result={r} />
       <section className="panel" aria-labelledby="contributor-list-title">
         <details className="contributor-disclosure">
           <summary className="contributors-summary">
@@ -743,6 +778,32 @@ export function Results({
                                     </li>
                                   ))}
                                 </ul>
+                                <p>
+                                  {t("activity.person", {
+                                    name: row.account.username,
+                                    count: row.edits.length,
+                                    projects: projectActivity(
+                                      row.edits,
+                                      session.catalog,
+                                    )
+                                      .map(
+                                        (p) =>
+                                          `${p.domain} : ${format(p.count)}`,
+                                      )
+                                      .join(" ; "),
+                                  })}
+                                </p>
+                                {r.start && r.end && (
+                                  <ContributionCalendar
+                                    edits={row.edits}
+                                    start={r.start}
+                                    end={r.end}
+                                    observedEnd={r.observedEnd ?? r.start}
+                                    complete={row.complete}
+                                    catalog={session.catalog}
+                                    individual
+                                  />
+                                )}
                                 <h4>{t("fup.periodHistory")}</h4>
                                 <p className="hint">{t("timelineLimit")}</p>
                                 <ul className="contribution-timeline">
@@ -807,6 +868,19 @@ export function Results({
           </div>
         </details>
       </section>
+      {r.start && r.end && (
+        <section className="panel" aria-label={t("calendar.title")}>
+          <ContributionCalendar
+            edits={contributions}
+            start={r.start}
+            end={r.end}
+            observedEnd={r.observedEnd ?? r.start}
+            complete={r.complete}
+            catalog={session.catalog}
+          />
+        </section>
+      )}
+      <KeyFigures session={session} result={r} />
       <WikipediaTopics session={session} result={r} save={saveTopics} />
       <section className="panel">
         <h2>{t("exports")}</h2>

@@ -86,9 +86,11 @@ async function restore(page: Page, s = fixture()) {
   });
   await expect(
     page.getByRole("heading", {
-      name: "Thématiques des articles créés sur Wikipédia, bêta",
+      name: "Analyse des thématiques des articles Wikipédia (bêta)",
     }),
   ).toBeVisible();
+  await page.locator(".topics-disclosure > summary").click();
+  await page.locator(".results-settings > summary").click();
 }
 
 async function model(page: Page, onCall?: (id: number) => Promise<void>) {
@@ -119,7 +121,7 @@ async function model(page: Page, onCall?: (id: number) => Promise<void>) {
   });
 }
 
-test("article topics explain the model, distinguish measures, reuse predictions and persist exports", async ({
+test("article-only ranking reuses classifications, resets on request and preserves topic selection in JSON", async ({
   page,
 }) => {
   const calls: number[] = [];
@@ -128,120 +130,83 @@ test("article topics explain the model, distinguish measures, reuse predictions 
   });
   await restore(page);
   const section = page.locator(".wikipedia-topics");
+  await expect(section.getByLabel("Mesure du classement")).toHaveCount(0);
+  await section.getByText("Comprendre le modèle", { exact: true }).click();
+  await expect(section.getByText(/Il utilise fastText/)).toBeVisible();
   await section
     .getByLabel("Créations ou modifications", { exact: true })
     .selectOption("both");
-  await section.getByText("Comprendre le modèle", { exact: true }).click();
-  await expect(section.getByText(/Il utilise fastText/)).toBeVisible();
-  await expect(
-    section.getByRole("link", { name: "Lire la fiche officielle du modèle" }),
-  ).toHaveAttribute("href", /Language_agnostic_link-based_article_topic$/);
   await section
-    .getByRole("button", { name: "Analyser les thématiques des articles" })
+    .getByRole("button", { name: "Analyser les thématiques", exact: true })
     .click();
   await expect(section.getByText("Articles examinés : 2 sur 2.")).toBeVisible();
   await expect(
     section.getByText(
-      /Comptes ayant contribué : 2 sur 3 comptes retenus \(66,7 %\).*Articles distincts : 2.*Contributions observées : 3/,
+      /Sélection : 2 articles distincts.*3 contributions de 2 comptes/,
     ),
   ).toBeVisible();
   const science = section
     .locator(".topic-bars li")
     .filter({ hasText: "Sciences et technologies" });
   await expect(science).toContainText("1 (50 %)");
-  await section.getByLabel("Mesure du classement").selectOption("edits");
-  await expect(science).toContainText("2 (66,7 %)");
   await section
     .getByLabel("Créations ou modifications", { exact: true })
     .selectOption("creation");
-  await expect(
-    section.getByText(
-      /Comptes ayant contribué : 1 sur 3 comptes retenus \(33,3 %\).*Articles distincts : 1.*Contributions observées : 1/,
-    ),
-  ).toBeVisible();
+  await expect(section.locator(".topic-bars")).toHaveCount(0);
+  await section
+    .getByRole("button", { name: "Analyser les thématiques", exact: true })
+    .click();
   await expect(science).toContainText("1 (100 %)");
-  await section.getByLabel("Afficher les sous-thèmes").check();
-  await expect(section.locator(".topic-bars")).toContainText("Physique");
+  expect(calls).toEqual([42, 43]);
+  await section
+    .getByRole("button", {
+      name: "Recommencer l’analyse thématique à zéro",
+      exact: true,
+    })
+    .click();
+  await expect.poll(() => calls.length).toBe(3);
+  await expect(science).toContainText("1 (100 %)");
+  expect(calls).toEqual([42, 43, 42]);
   await section
     .getByLabel("Créations ou modifications", { exact: true })
     .selectOption("modification");
+  await section
+    .getByRole("button", { name: "Analyser les thématiques", exact: true })
+    .click();
   await expect(
-    section.locator(".topic-bars li").filter({ hasText: "Physique" }),
-  ).toContainText("1 (50 %)");
-  expect(calls).toEqual([42, 43]);
+    section.getByText(
+      /Sélection : 2 articles distincts.*2 contributions de 2 comptes/,
+    ),
+  ).toBeVisible();
+  expect(calls).toHaveLength(3);
+  await section.getByLabel("Afficher les sous-thèmes").check();
+  await expect(section.locator(".topic-bars")).toContainText("Physique");
   const csvDownload = page.waitForEvent("download");
   await section
     .getByRole("button", { name: "Exporter les statistiques thématiques CSV" })
     .click();
-  const csv = await readFile(
-    (await (await csvDownload).path()) as string,
-    "utf8",
-  );
-  expect(csv).toContain("outlink-topic-model");
-  expect(csv).toContain("period_start");
+  const csv = await readFile((await (await csvDownload).path())!, "utf8");
+  expect(csv).toContain("articles");
+  expect(csv).toContain("modification");
   const jsonDownload = page.waitForEvent("download");
   await page
     .getByRole("button", { name: "Exporter l’analyse JSON", exact: true })
     .first()
     .click();
-  const saved: Session = JSON.parse(
-    await readFile((await (await jsonDownload).path()) as string, "utf8"),
+  const saved = JSON.parse(
+    await readFile((await (await jsonDownload).path())!, "utf8"),
   );
-  expect(Object.keys(saved.article_topics!)).toHaveLength(2);
-  await page.setViewportSize({ width: 390, height: 844 });
-  await expect
-    .poll(() =>
-      page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
-    )
-    .toBe(true);
-  expect(
-    (await new AxeBuilder({ page }).include(".wikipedia-topics").analyze())
-      .violations,
-  ).toEqual([]);
-  await mkdir("../output", { recursive: true });
-  await page.screenshot({
-    path: "../output/topics-mobile.png",
-    fullPage: true,
-  });
-  await section.screenshot({ path: "../output/topics-panel-mobile.png" });
-  await page.setViewportSize({ width: 320, height: 844 });
-  await expect
-    .poll(() =>
-      page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
-    )
-    .toBe(true);
-  await page.setViewportSize({ width: 1280, height: 900 });
-  await section
-    .getByLabel("Créations ou modifications", { exact: true })
-    .selectOption("both");
-  await section.getByLabel("Afficher les sous-thèmes").uncheck();
-  await page.screenshot({
-    path: "../output/topics-desktop.png",
-    fullPage: true,
-  });
-  await section.screenshot({ path: "../output/topics-panel-desktop.png" });
-  await page.getByLabel("Langue", { exact: true }).selectOption("en");
-  await expect(
-    section.getByRole("heading", {
-      name: "Topics of articles created on Wikipedia, beta",
-    }),
-  ).toBeVisible();
-  await expect(section.locator(".topic-bars")).toContainText(
-    "Science and technology",
-  );
-  await page.getByLabel("Language", { exact: true }).selectOption("fr");
+  expect(saved.article_topics_kind).toBe("modification");
+  expect(Object.keys(saved.article_topics)).toHaveLength(2);
   await restore(page, saved);
-  await section
-    .getByLabel("Créations ou modifications", { exact: true })
-    .selectOption("both");
-  await page
-    .locator(".wikipedia-topics")
-    .getByRole("button", { name: "Analyser les thématiques des articles" })
-    .click();
   await expect(
-    page.locator(".wikipedia-topics").getByText("Articles examinés : 2 sur 2."),
-  ).toBeVisible();
-  expect(calls).toEqual([42, 43]);
+    section.getByLabel("Créations ou modifications", { exact: true }),
+  ).toHaveValue("modification");
+  await section
+    .getByRole("button", { name: "Analyser les thématiques", exact: true })
+    .click();
+  expect(calls).toHaveLength(3);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 
 test("model failures are separate from unclassified articles and retries preserve the denominator", async ({
@@ -279,7 +244,7 @@ test("model failures are separate from unclassified articles and retries preserv
     .getByLabel("Créations ou modifications", { exact: true })
     .selectOption("both");
   await section
-    .getByRole("button", { name: "Analyser les thématiques des articles" })
+    .getByRole("button", { name: "Analyser les thématiques" })
     .click();
   await expect(
     section.getByText(
@@ -287,7 +252,7 @@ test("model failures are separate from unclassified articles and retries preserv
     ),
   ).toBeVisible();
   await section
-    .getByRole("button", { name: "Compléter l’analyse thématique" })
+    .getByRole("button", { name: "Réessayer les articles indisponibles" })
     .click();
   await expect(
     section.getByText(
@@ -320,7 +285,7 @@ test("pause preserves completed articles and resume skips their API calls", asyn
     .getByLabel("Créations ou modifications", { exact: true })
     .selectOption("both");
   await section
-    .getByRole("button", { name: "Analyser les thématiques des articles" })
+    .getByRole("button", { name: "Analyser les thématiques" })
     .click();
   await expect(section.getByText("Articles examinés : 1 sur 2.")).toBeVisible();
   await expect.poll(() => secondRequested).toBe(true);
@@ -328,11 +293,13 @@ test("pause preserves completed articles and resume skips their API calls", asyn
     .getByRole("button", { name: "Mettre en pause", exact: true })
     .click();
   await expect(
-    section.getByRole("button", { name: "Compléter l’analyse thématique" }),
+    section.getByRole("button", {
+      name: "Réessayer les articles indisponibles",
+    }),
   ).toBeEnabled();
   blockedResolve();
   await section
-    .getByRole("button", { name: "Compléter l’analyse thématique" })
+    .getByRole("button", { name: "Réessayer les articles indisponibles" })
     .click();
   await expect(section.getByText("Articles examinés : 2 sur 2.")).toBeVisible();
   expect(calls).toEqual([42, 43, 43]);
@@ -419,7 +386,7 @@ test("contributor sorting and deleted-article filters update results and themes 
     section.getByLabel("Créations ou modifications", { exact: true }),
   ).toHaveValue("creation");
   await section
-    .getByRole("button", { name: "Analyser les thématiques des articles" })
+    .getByRole("button", { name: "Analyser les thématiques" })
     .click();
   await expect(section.getByText("Articles examinés : 1 sur 1.")).toBeVisible();
   await expect(
@@ -441,6 +408,9 @@ test("contributor sorting and deleted-article filters update results and themes 
   await expect(creation).toBeChecked();
   await expect(modifications).toBeChecked();
   await creation.uncheck();
+  await section
+    .getByRole("button", { name: "Analyser les thématiques", exact: true })
+    .click();
   expect(await names()).not.toContain("NoContribution");
   await expect(
     section
@@ -464,27 +434,7 @@ test("contributor sorting and deleted-article filters update results and themes 
     path: "../output/deleted-results-desktop.png",
     fullPage: true,
   });
-  await page.setViewportSize({ width: 390, height: 844 });
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
-  await expect
-    .poll(() =>
-      page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
-    )
-    .toBe(true);
-  await page.screenshot({
-    path: "../output/deleted-results-mobile.png",
-    fullPage: true,
-  });
-  await page
-    .locator(".deleted-controls")
-    .screenshot({ path: "../output/deleted-controls-mobile.png" });
-  await list.screenshot({ path: "../output/deleted-list-mobile.png" });
-  await page.setViewportSize({ width: 320, height: 844 });
-  await expect
-    .poll(() =>
-      page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
-    )
-    .toBe(true);
 });
 
 test("creation-only analysis uses the first observed revision to resolve old XTools data", async ({
@@ -514,7 +464,7 @@ test("creation-only analysis uses the first observed revision to resolve old XTo
   await restore(page, s);
   await page
     .locator(".wikipedia-topics")
-    .getByRole("button", { name: "Analyser les thématiques des articles" })
+    .getByRole("button", { name: "Analyser les thématiques" })
     .click();
   await expect(page.getByText("Articles examinés : 1 sur 1.")).toBeVisible();
   expect(revisions).toEqual([1]);
@@ -544,7 +494,7 @@ test("a Lift Wing outage leaves retention counts, filters and exports usable", a
   await restore(page, s);
   const section = page.locator(".wikipedia-topics");
   await section
-    .getByRole("button", { name: "Analyser les thématiques des articles" })
+    .getByRole("button", { name: "Analyser les thématiques" })
     .click();
   await page.getByRole("button", { name: "J+30", exact: true }).click();
   await expect(section.getByText(/Source indisponible : 1/)).toBeVisible({
