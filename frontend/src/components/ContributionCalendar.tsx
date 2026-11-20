@@ -48,7 +48,6 @@ function CalendarBody({
   const [selectedYear, setYear] = useState(end.slice(0, 4)),
     [selected, setSelected] = useState(""),
     [page, setPage] = useState(0);
-  const [measure, setMeasure] = useState("average");
   const valid =
     Number.isFinite(dateMs(start)) &&
     Number.isFinite(dateMs(end)) &&
@@ -93,12 +92,10 @@ function CalendarBody({
   const dayProjects = projectActivity(dayEdits, catalog);
   const pages = Math.max(1, Math.ceil(dayEdits.length / 50)),
     current = Math.min(page, pages - 1);
-  const maxWeek =
-    Math.max(
-      ...weekdays.map((row) =>
-        measure === "average" ? row.average : row.count,
-      ),
-    ) || 1;
+  const maxWeek = Math.max(...weekdays.map((row) => row.count)) || 1;
+  const weekdayTotal = weekdays.reduce((sum, row) => sum + row.count, 0);
+  const share = (count: number) =>
+    fmt(weekdayTotal ? (count / weekdayTotal) * 100 : 0) + " %";
   if (!valid) return <p>{t("fup.invalid")}</p>;
   return (
     <div className="calendar-content">
@@ -290,13 +287,6 @@ function CalendarBody({
       )}
       <h3>{t("calendar.weekTitle")}</h3>
       <p className="hint">{t("calendar.weekHelp")}</p>
-      <label>
-        {t("calendar.weekMeasure")}
-        <select value={measure} onChange={(e) => setMeasure(e.target.value)}>
-          <option value="average">{t("calendar.average")}</option>
-          <option value="count">{t("contributions")}</option>
-        </select>
-      </label>
       <ol className="weekday-bars" aria-label={t("calendar.weekTitle")}>
         {weekdays.map((row) => (
           <li key={row.day}>
@@ -304,12 +294,12 @@ function CalendarBody({
             <span className="weekday-track" aria-hidden="true">
               <span
                 style={{
-                  width: `${((measure === "average" ? row.average : row.count) / maxWeek) * 100}%`,
+                  width: `${(row.count / maxWeek) * 100}%`,
                 }}
               />
             </span>
             <strong>
-              {fmt(measure === "average" ? row.average : row.count)}
+              {fmt(row.count)} ({share(row.count)})
             </strong>
           </li>
         ))}
@@ -321,8 +311,7 @@ function CalendarBody({
             <th scope="col">{t("calendar.weekday")}</th>
             <th scope="col">{t("contributions")}</th>
             <th scope="col">{t("calendar.accounts")}</th>
-            <th scope="col">{t("calendar.occurrences")}</th>
-            <th scope="col">{t("calendar.average")}</th>
+            <th scope="col">{t("activity.share")}</th>
           </tr>
         </thead>
         <tbody>
@@ -331,10 +320,7 @@ function CalendarBody({
               <th scope="row">{weekday(row.day)}</th>
               <td>{fmt(row.count)}</td>
               <td>{fmt(row.contributors)}</td>
-              <td>{row.days}</td>
-              <td>
-                {row.days ? fmt(row.average) : t("calendar.notApplicable")}
-              </td>
+              <td>{share(row.count)}</td>
             </tr>
           ))}
         </tbody>

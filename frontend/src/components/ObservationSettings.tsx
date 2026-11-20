@@ -87,6 +87,7 @@ export function ObservationSettings({
             />
           </label>
         </div>
+        <p className="hint">{t("deleted.dateHelp")}</p>
         <button onClick={() => updateObservation({ end: today() })}>
           {t("fup.today")}
         </button>

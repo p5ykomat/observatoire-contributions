@@ -19,12 +19,12 @@ import { Chart } from "./Chart";
 import { ObservationSettings } from "./ObservationSettings";
 import { registrationSummary } from "../analysis/registrationSummary";
 import type { Params } from "../types";
-import type { ArticleTopics } from "../types";
-import { WikipediaTopics } from "./WikipediaTopics";
+import type { ArticleTopics, ArticleStatus } from "../types";
 import { ContributionAnalysis } from "./ContributionAnalysis";
 import { ContributionCalendar } from "./ContributionCalendar";
 import { KeyFigures } from "./KeyFigures";
 import { observedContributions, projectActivity } from "../analysis/activity";
+import { wikipediaActivity } from "../analysis/articleTopics";
 
 export function Results({
   session,
@@ -33,12 +33,14 @@ export function Results({
   setParams,
   recollect,
   saveTopics,
+  saveArticleStatus,
 }: {
   session: Session;
   toggle: (name: string) => void;
   setQuestion: (question: FollowupQuestion) => void;
   setParams: (params: Partial<Params>) => void;
   recollect: () => void;
+  saveArticleStatus: (cache: Record<string, ArticleStatus>) => void;
   saveTopics: (
     cache: Record<string, ArticleTopics>,
     kind: "creation" | "modification" | "both",
@@ -55,6 +57,7 @@ export function Results({
   const r = useMemo(() => analyzeFollowup(session), [session]);
   const q = r.question;
   const contributions = useMemo(() => observedContributions(r), [r]);
+  const wikipedia = useMemo(() => wikipediaActivity(r, session), [r, session]);
   const notices = resultNotices(session, r);
   const needsArchives =
     r.projects.some((p) => p.family === "wikipedia") &&
@@ -237,6 +240,78 @@ export function Results({
           </a>
         </p>
       )}
+      {r.projects.some((project) => project.family === "wikipedia") && (
+        <section
+          className="panel deleted-controls"
+          aria-labelledby="deleted-controls-title"
+        >
+          <h2 id="deleted-controls-title">{t("deleted.title")}</h2>
+          <p>{t("deleted.scope")}</p>
+          <p className="hint">{t("deleted.dateHelp")}</p>
+          <label className="check">
+            <input
+              type="checkbox"
+              checked={q.include_deleted_creations !== false}
+              onChange={(event) =>
+                change({ include_deleted_creations: event.target.checked })
+              }
+            />
+            {t("deleted.includeCreations")}
+          </label>
+          <label className="check">
+            <input
+              type="checkbox"
+              checked={q.include_deleted_modifications !== false}
+              onChange={(event) =>
+                change({
+                  include_deleted_modifications: event.target.checked,
+                })
+              }
+            />
+            {t("deleted.includeModifications")}
+          </label>
+          <p className="hint">{t("deleted.help")}</p>
+          {r.deleted.collected ? (
+            <>
+              <p role="status">
+                {t("deleted.counts", {
+                  creations: r.deleted.creations,
+                  modifications: r.deleted.modifications,
+                })}
+              </p>
+              {r.deleted.unknown > 0 && (
+                <p className="hint">
+                  {t("deleted.unknown", { count: r.deleted.unknown })}
+                </p>
+              )}
+              {r.deleted.incomplete.length > 0 && (
+                <div className="notice" role="status">
+                  <p>
+                    {t("deleted.incomplete", {
+                      count: r.deleted.incomplete.length,
+                    })}
+                  </p>
+                  <details>
+                    <summary>{t("fup.affectedAccounts")}</summary>
+                    <ul>
+                      {r.deleted.incomplete.map((name) => (
+                        <li key={name}>{name}</li>
+                      ))}
+                    </ul>
+                  </details>
+                </div>
+              )}
+              {r.deleted.unclassified.length > 0 && r.deleted.unknown > 0 && (
+                <p className="hint">{t("deleted.classificationIncomplete")}</p>
+              )}
+            </>
+          ) : (
+            <div className="notice">
+              <p>{t("deleted.oldArchive")}</p>
+            </div>
+          )}
+        </section>
+      )}
       <section
         className="panel followup-question"
         aria-labelledby="question-title"
@@ -409,76 +484,6 @@ export function Results({
               <p className="hint">{t("fup.otherCategories")}</p>
             </>
           )}
-          {r.projects.some((project) => project.family === "wikipedia") && (
-            <fieldset className="deleted-controls">
-              <legend>{t("deleted.title")}</legend>
-              <label className="check">
-                <input
-                  type="checkbox"
-                  checked={q.include_deleted_creations !== false}
-                  onChange={(event) =>
-                    change({ include_deleted_creations: event.target.checked })
-                  }
-                />
-                {t("deleted.includeCreations")}
-              </label>
-              <label className="check">
-                <input
-                  type="checkbox"
-                  checked={q.include_deleted_modifications !== false}
-                  onChange={(event) =>
-                    change({
-                      include_deleted_modifications: event.target.checked,
-                    })
-                  }
-                />
-                {t("deleted.includeModifications")}
-              </label>
-              <p className="hint">{t("deleted.help")}</p>
-              {r.deleted.collected ? (
-                <>
-                  <p role="status">
-                    {t("deleted.counts", {
-                      creations: r.deleted.creations,
-                      modifications: r.deleted.modifications,
-                    })}
-                  </p>
-                  {r.deleted.unknown > 0 && (
-                    <p className="hint">
-                      {t("deleted.unknown", { count: r.deleted.unknown })}
-                    </p>
-                  )}
-                  {r.deleted.incomplete.length > 0 && (
-                    <div className="notice" role="status">
-                      <p>
-                        {t("deleted.incomplete", {
-                          count: r.deleted.incomplete.length,
-                        })}
-                      </p>
-                      <details>
-                        <summary>{t("fup.affectedAccounts")}</summary>
-                        <ul>
-                          {r.deleted.incomplete.map((name) => (
-                            <li key={name}>{name}</li>
-                          ))}
-                        </ul>
-                      </details>
-                    </div>
-                  )}
-                  {r.deleted.unclassified.length > 0 &&
-                    r.deleted.unknown > 0 && (
-                      <p className="hint">
-                        {t("deleted.classificationIncomplete")}
-                      </p>
-                    )}
-                </>
-              ) : (
-                <div className="notice">
-                  <p>{t("deleted.oldArchive")}</p>
-                </div>
-              )}
-            </fieldset>
-          )}
         </details>
       </section>
       {!r.valid && <p className="notice">{t("fup.invalid")}</p>}
@@ -547,6 +552,29 @@ export function Results({
             <strong>{format(Number(value))}</strong>
           </div>
         ))}
+        {r.projects.some((project) => project.family === "wikipedia") &&
+          q.wikipedia_categories.includes("CONTENT") && (
+            <div className="wikipedia-creation-kpi">
+              <span>{t("activity.creationsTitle")}</span>
+              <strong>
+                {wikipedia.unknownType > 0 ? "≥ " : ""}
+                {format(wikipedia.creations)}
+              </strong>
+              <small className="category-example">
+                {t("activity.deletedCreations", {
+                  count: wikipedia.deletedCreations,
+                })}
+              </small>
+              <small className="category-example">
+                {t("activity.creationsScope")}
+              </small>
+              {wikipedia.unknownType > 0 && (
+                <small className="category-example">
+                  {t("activity.creationMinimum")}
+                </small>
+              )}
+            </div>
+          )}
       </div>
       {session.new_accounts && (
         <section
@@ -880,8 +908,12 @@ export function Results({
           />
         </section>
       )}
-      <KeyFigures session={session} result={r} />
-      <WikipediaTopics session={session} result={r} save={saveTopics} />
+      <KeyFigures
+        session={session}
+        result={r}
+        saveArticleStatus={saveArticleStatus}
+        saveTopics={saveTopics}
+      />
       <section className="panel">
         <h2>{t("exports")}</h2>
         <p>{t("fup.exportHelp")}</p>

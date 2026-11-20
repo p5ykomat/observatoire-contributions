@@ -75,6 +75,18 @@ export interface ArticleTopics {
   topics: { topic: string; score: number }[];
   model_skipped?: boolean;
 }
+export interface ArticleStatus {
+  project: string;
+  revision: number;
+  title: string;
+  current_title: string;
+  page_id: number | null;
+  status: "online" | "deleted" | "unavailable";
+  recreated: boolean;
+  redirect: boolean;
+  disambiguation: boolean;
+  checked_at: string;
+}
 export interface Params {
   title: string;
   start: string;
@@ -134,6 +146,7 @@ export interface Session {
   question?: FollowupQuestion;
   article_topics?: Record<string, ArticleTopics>;
   article_topics_kind?: "creation" | "modification" | "both";
+  article_status?: Record<string, ArticleStatus>;
   deleted_collection_version?: 1;
   event_registration?: EventRegistrationSource;
   new_accounts?: {

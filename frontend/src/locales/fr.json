@@ -2,12 +2,7 @@
   "app": "Rétention Wikimédia",
   "tagline": "Comprendre les parcours après une action",
   "introText": "Suivez une cohorte dans le temps, sur ses projets d’origine et dans tout l’écosystème Wikimédia.",
-  "steps": [
-    "Importer",
-    "Paramétrer",
-    "Collecter",
-    "Résultats"
-  ],
+  "steps": ["Importer", "Paramétrer", "Collecter", "Résultats"],
   "skip": "Aller au contenu",
   "privacy": "Données publiques. Sans compte. Sans conservation de cohorte sur le serveur.",
   "clear": "Effacer les données de cette analyse",
@@ -431,7 +426,7 @@
     "by": "Trier par {{column}}"
   },
   "deleted": {
-    "title": "Contributions sur des articles ensuite supprimés",
+    "title": "Articles Wikipédia ensuite supprimés",
     "includeCreations": "Inclure les créations d’articles ensuite supprimés",
     "includeModifications": "Inclure les modifications sur des articles ensuite supprimés",
     "help": "Ces données sont recherchées pendant la collecte sur les éditions de Wikipédia observées. Les cases recalculent immédiatement les résultats sans nouvel appel. Les modifications annulées sur un article existant restent comptées.",
@@ -440,30 +435,32 @@
     "incomplete": "La recherche des contributions archivées n’a pas pu être terminée pour {{count}} comptes. Les résultats qui les incluent restent un minimum.",
     "classificationIncomplete": "La source des créations supprimées n’a pas répondu. Une exclusion séparée des créations ou des modifications ne permet pas encore de calculer un taux définitif.",
     "oldArchive": "Cette analyse ne contient pas encore la collecte complémentaire des contributions archivées. Relancez la collecte pour les rechercher. Les cases agissent uniquement sur les données déjà récupérées.",
-    "revision": "Contribution archivée après suppression"
+    "revision": "Contribution archivée après suppression",
+    "scope": "Ces deux cases concernent uniquement les créations et modifications dans l’espace article de Wikipédia. Elles ne s’appliquent pas à Commons, Wikidata ou aux autres projets. Les modifications annulées, encore présentes dans l’historique d’un article existant, restent comptées.",
+    "dateHelp": "Les contributions sont comptées selon leur date. Une contribution faite pendant la période reste incluse si la page est supprimée ensuite et que la case correspondante est cochée, lorsque ses métadonnées publiques ont été récupérées."
   },
   "topics": {
-    "title": "Analyse des thématiques des articles Wikipédia (bêta)",
+    "title": "Thématiques des articles Wikipédia (bêta)",
     "deleted": "Articles supprimés inclus : {{count}}, sans thématique disponible. Le modèle ne reçoit pas ces articles. Les deux cases d’inclusion s’appliquent aussi à ce bilan.",
     "partial": "La période ou la collecte n’est pas complète. Ce bilan décrit uniquement les contributions déjà observées.",
-    "intro": "Le classement présente les articles créés par défaut. Vous pouvez aussi choisir les articles modifiés. Le modèle de Wikimédia outlink-topic-model est appelé uniquement pour les articles accessibles de la sélection.",
+    "intro": "Choisissez les articles créés ou modifiés encore accessibles. Les contributions sur des pages supprimées sont exclues de ce module, quelles que soient les deux cases du bilan général. Les redirections et homonymies sont écartées avant le classement. Les thèmes décrivent les articles, pas le texte ajouté.",
     "methodTitle": "Comprendre le modèle",
     "method": "outlink-topic-model est le modèle multilingue de Wikimédia, accessible via Lift Wing. Il utilise fastText et les liens des articles reliés à Wikidata pour estimer 64 thèmes. Nous retenons les scores de confiance d’au moins 0,5.",
     "methodLimits": "Il classe l’article au moment de l’analyse, pas le texte ajouté. Les thèmes peuvent se recouper ou manquer. Le classement est indicatif ; les scores ne sont pas des pourcentages de contributions. Le JSON conserve ce classement pour le réutiliser.",
     "modelLink": "Lire la fiche officielle du modèle",
-    "launch": "Analyser les thématiques",
+    "launch": "Analyser",
     "hide": "Masquer cette analyse",
     "resume": "Réessayer les articles indisponibles",
     "complete": "Analyse thématique terminée",
     "empty": "Aucune contribution sur un article Wikipédia dans la sélection actuelle. Vérifiez les projets, langues et types de pages sélectionnés.",
-    "progress": "Articles examinés : {{done}} sur {{total}}.",
+    "progress": "Pages vérifiées : {{done}} sur {{total}}.",
     "progressLabel": "Progression de l’analyse des articles",
     "period": "Cette analyse suit la période, les comptes, les projets et les filtres des résultats ci-dessus. Seul l’espace principal de Wikipédia est pris en compte. Une pause conserve les articles déjà examinés dans cette page ; le JSON les sauvegarde après une pause ou à la fin.",
     "kind": "Créations ou modifications",
     "kinds": {
       "both": "Créations et modifications",
-      "creation": "Créations",
-      "modification": "Modifications d’articles",
+      "creation": "Articles créés encore accessibles",
+      "modification": "Articles modifiés encore accessibles",
       "unknown": "Type encore indéterminé"
     },
     "metric": "Mesure du classement",
@@ -472,7 +469,7 @@
       "articles": "Articles distincts",
       "edits": "Contributions"
     },
-    "answer": "Sélection : {{articles}} articles distincts, concernés par {{edits}} contributions de {{contributors}} comptes sur Wikipédia.",
+    "answer": "Articles distincts retenus pour les thématiques : {{articles}}.",
     "volumeTitle": "Créations et modifications observées",
     "volumeCaption": "Répartition des contributions sur les articles, avant le filtre créations ou modifications",
     "share": "Part du total",
@@ -571,8 +568,13 @@
     "enterprise": "Wikimédia Enterprise fournit notamment les catégories des articles. Son schéma documenté ne propose pas d’équivalent direct aux 64 thèmes de ce modèle ; changer d’API ne garantit donc pas un meilleur classement.",
     "enterpriseLink": "Consulter l’accès Enterprise pour Toolforge",
     "restart": "Recommencer l’analyse thématique à zéro",
-    "actionsHelp": "Choisissez les articles à examiner, puis lancez l’analyse. Changer la sélection conserve les classements en mémoire. Recommencer à zéro interroge à nouveau le modèle pour cette sélection, sans relancer la collecte des comptes.",
-    "examinedHelp": "Une tentative peut échouer : le bilan ci-dessous distingue les articles classés et ceux dont la source est indisponible."
+    "actionsHelp": "Analyser lance un nouveau classement de cette sélection. En cas d’échec, réessayez uniquement les articles indisponibles. Le bilan général des contributions ne change pas.",
+    "examinedHelp": "Les pages vérifiées pendant le traitement peuvent ensuite être écartées si elles ne correspondent pas à ce choix. Le bilan final porte uniquement sur les articles retenus.",
+    "classifiedCount": "Classés : {{count}}",
+    "unclassifiedCount": "Sans thème reconnu : {{count}}",
+    "unavailableCount": "Non récupérés par le modèle : {{count}}",
+    "pendingCount": "À analyser : {{count}}",
+    "subtopicsTitle": "Sous-thèmes les plus représentés"
   },
   "newAccounts": {
     "title": "Nouveaux inscrits sur Wikipédia en français",
@@ -698,7 +700,7 @@
     "accounts": "Comptes ayant contribué",
     "total": "Total",
     "empty": "Aucune contribution dans cette sélection.",
-    "wikipedia": "Sur les articles Wikipédia : {{total}} contributions, dont {{creations}} créations et {{modifications}} modifications.",
+    "wikipedia": "Dans l’espace article de Wikipédia : {{total}} contributions, dont {{creations}} créations et {{modifications}} modifications.",
     "details": "Ouvrir le détail des contributions",
     "detailHelp": "Liste des contributions correspondant aux filtres actuels. Les horaires sont en UTC. Pour une contribution supprimée, le lien ouvre le journal de suppression public.",
     "page": "Page concernée",
@@ -710,7 +712,11 @@
     "explore": "Explorez les résultats en changeant la période, les projets ou les types de contributions. Le bilan, les graphiques, les listes et les calendriers se recalculent immédiatement avec les données disponibles. Une nouvelle collecte est nécessaire seulement si des données manquent.",
     "collectPeriod": "Collecte demandée pour la sélection : du {{start}} au {{end}} inclus, en UTC.",
     "settings": "Modifier la période, les projets et les types de contributions",
-    "wikipediaUnknown": "Type à préciser : {{count}}."
+    "wikipediaUnknown": "Type à préciser : {{count}}.",
+    "creationsTitle": "Créations dans l’espace article",
+    "deletedCreations": "Dont créations ensuite supprimées incluses : {{count}}.",
+    "creationsScope": "Pages créées sur les Wikipédias sélectionnées pendant cette période, redirections et homonymies comprises.",
+    "creationMinimum": "Minimum identifié : certaines contributions ne permettent pas encore de distinguer création et modification."
   },
   "calendar": {
     "title": "Calendrier des contributions",
@@ -725,7 +731,7 @@
     "detail": "Détail de la journée",
     "daySummary": "Contributions : {{count}} ; comptes distincts : {{accounts}}.",
     "weekTitle": "Quels jours de la semaine sont les plus actifs ?",
-    "weekHelp": "La moyenne divise les contributions par le nombre de journées de ce type dans la période observée. Elle permet de comparer une période avec deux vendredis et un seul samedi. Les comptes sont distincts par jour de semaine et peuvent figurer dans plusieurs lignes.",
+    "weekHelp": "Nombre de contributions pour chaque jour de la semaine et part du total de la période sélectionnée. Tous les lundis sont regroupés, puis tous les mardis, etc. Les pourcentages totalisent environ 100 % après arrondi. Les dates sont en UTC.",
     "weekMeasure": "Mesure du graphique",
     "average": "Contributions par journée en moyenne",
     "weekDetails": "Activité par jour de la semaine",
@@ -737,16 +743,36 @@
     "oneContribution": "contribution"
   },
   "keyFigures": {
-    "title": "Autres chiffres clés",
+    "title": "Statistiques",
     "help": "Chiffres calculés uniquement sur les contributions observées dans la sélection actuelle. Les pourcentages portent sur les comptes ayant contribué. Les horaires sont en UTC. En cas d’égalité, la première date ou tranche horaire est affichée.",
     "activeDays": "Journées avec au moins une contribution : {{count}}.",
     "record": "Journée la plus active : {{date}}, avec {{count}} contributions.",
     "ties": "{{count}} journées atteignent ce même maximum.",
     "hour": "Tranche horaire la plus active : de {{start}} h à {{end}} h UTC, avec {{count}} contributions cumulées sur la période.",
     "average": "Par compte actif ({{count}} comptes) : {{mean}} contributions en moyenne.",
+    "average_one": "Par compte actif ({{count}} compte) : {{mean}} contributions en moyenne.",
     "single": "Comptes avec exactement une contribution : {{count}} ({{percent}} % des comptes actifs).",
     "multi": "Comptes actifs sur plusieurs wikis, langues incluses : {{count}} ({{percent}} % des comptes actifs).",
     "multiFamilies": "Comptes actifs dans plusieurs familles de projets : {{count}} ({{percent}} % des comptes actifs).",
-    "names": "Voir les {{count}} comptes concernés"
+    "names": "Voir les {{count}} comptes concernés",
+    "names_one": "Voir le compte concerné",
+    "accountsTitle": "Activité des comptes",
+    "contributionsOn": "Contributions sur {{project}}"
+  },
+  "articleStats": {
+    "title": "État des pages Wikipédia créées",
+    "period": "Créations des comptes retenus, du {{start}} au {{end}} inclus (UTC), selon les filtres actuels.",
+    "total": "Créations identifiées sur la période : {{count}}.",
+    "online": "Pages toujours accessibles : {{count}}.",
+    "deleted": "Pages d’origine supprimées : {{count}}.",
+    "unknown": "État non confirmé : {{count}}.",
+    "recreated": "Parmi les créations supprimées, titres réutilisés par une nouvelle page : {{count}} (déjà compris dans les suppressions).",
+    "otherPages": "Parmi les pages accessibles, redirections ou homonymies : {{count}}.",
+    "checked": "Dernier contrôle : {{date}} UTC.",
+    "help": "L’état décrit la situation au moment du contrôle, pas à la fin de la période étudiée. Une page accessible n’est pas nécessairement admissible. Un titre réutilisé correspond à une nouvelle page et ne prouve pas que l’article d’origine a été restauré. Ce contrôle public ne fait pas appel au modèle thématique.",
+    "progress": "Vérification de l’état des pages : {{done}} sur {{total}}.",
+    "refresh": "Actualiser l’état des pages",
+    "unavailableHelp": "Certaines pages n’ont pas pu être vérifiées, ou leur historique public ne permet pas de confirmer leur état. Elles ne sont comptées ni comme accessibles ni comme supprimées. Vous pouvez actualiser le contrôle.",
+    "unconfirmedPages": "Voir les pages dont l’état reste à confirmer"
   }
 }

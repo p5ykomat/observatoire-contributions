@@ -7,6 +7,10 @@ import { analyzeFollowup } from "./analysis/followup";
 import { resultNotices } from "./analysis/resultNotices";
 import { registrationSummary } from "./analysis/registrationSummary";
 import { projectActivity, observedContributions } from "./analysis/activity";
+import {
+  wikipediaActivity,
+  creationStateSummary,
+} from "./analysis/articleTopics";
 import type { Session } from "./types";
 import type { RegistrationImport } from "./registrationImporter";
 import { cohortFilename, cohortRows } from "./cohortFiles";
@@ -67,6 +71,8 @@ export function exportCSV(s: Session, summary = false) {
     analysis_start: r.start,
     analysis_end: r.end,
     data_until: r.collectedUntil,
+    wikipedia_activity: wikipediaActivity(r, s),
+    wikipedia_page_status: creationStateSummary(r, s),
     contribution_breakdown: projectActivity(
       observedContributions(r),
       s.catalog,
@@ -250,6 +256,38 @@ export function makePDF(s: Session, nominative = false) {
       : t("fup.minimum", { active: r.active, total: r.n }),
   );
   paragraph(t("totalEdits") + ": " + r.totalEdits);
+  const wikipedia = wikipediaActivity(r, s);
+  if (r.projects.some((project) => project.family === "wikipedia")) {
+    paragraph(
+      t("activity.creationsTitle") +
+        ": " +
+        (wikipedia.unknownType > 0 ? ">= " : "") +
+        wikipedia.creations,
+    );
+    paragraph(
+      t("activity.deletedCreations", { count: wikipedia.deletedCreations }),
+    );
+    paragraph(t("activity.creationsScope"));
+    paragraph(t("deleted.dateHelp"));
+    const state = creationStateSummary(r, s);
+    if (state.checked_at) {
+      paragraph(t("articleStats.online", { count: state.online }));
+      paragraph(t("articleStats.deleted", { count: state.deleted }));
+      if (state.unconfirmed)
+        paragraph(t("articleStats.unknown", { count: state.unconfirmed }));
+      if (state.recreated)
+        paragraph(t("articleStats.recreated", { count: state.recreated }));
+      paragraph(
+        t("articleStats.checked", {
+          date: new Date(state.checked_at).toLocaleString(
+            i18n.resolvedLanguage,
+            { timeZone: "UTC" },
+          ),
+        }),
+      );
+      paragraph(t("articleStats.help"));
+    }
+  }
   heading(t("activity.title"));
   paragraph(t("activity.help"));
   table(

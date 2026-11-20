@@ -8,6 +8,7 @@ from fastapi.staticfiles import StaticFiles
 
 from backend.analysis.taxonomy import RULES
 from backend.models import BatchRequest, DashboardRequest, GlobalRequest, PageRequest
+from backend.providers.article_status import ArticleStatusProvider, ArticleStatusRequest
 from backend.providers.article_topics import ArticleRequest, ArticleTopicsProvider
 from backend.providers.catalog import CatalogProvider
 from backend.providers.centralauth import CentralAuthProvider
@@ -169,6 +170,12 @@ async def contributions(body: PageRequest, request: Request):
 async def article_topics(body: ArticleRequest, request: Request):
     transport, catalog = providers(request)
     return await ArticleTopicsProvider(transport, catalog).article(body)
+
+
+@app.post("/api/article-status")
+async def article_status(body: ArticleStatusRequest, request: Request):
+    transport, catalog = providers(request)
+    return await ArticleStatusProvider(transport, catalog).pages(body)
 
 
 @app.post("/api/deleted-contributions")
