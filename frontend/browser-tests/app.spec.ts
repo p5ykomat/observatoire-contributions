@@ -164,6 +164,7 @@ async function analyzed(page: Page) {
     page.getByRole("heading", { name: "Atelier de janvier", exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Aujourd’hui", exact: true }).click();
+  await page.locator(".contributors-summary").click();
   // Audit the final selected state, after the button's background transition.
   await page.locator(".deadline-buttons").evaluate(async (element) => {
     await Promise.all(
@@ -204,7 +205,12 @@ test("la collecte interroge les 13 nouveaux comptes retenus puis complète seule
     .click();
   for (const index of [15, 16, 17])
     await page.getByLabel(`Exclure Compte${index}`, { exact: true }).check();
-  await page.getByRole("button", { name: "Appliquer les exclusions sélectionnées", exact: true }).click();
+  await page
+    .getByRole("button", {
+      name: "Appliquer les exclusions sélectionnées",
+      exact: true,
+    })
+    .click();
   await page
     .getByRole("button", {
       name: "Vérifier les comptes et continuer",
@@ -928,12 +934,29 @@ test("733 comptes paginés, exclusions réversibles et détails sans défilement
   ).toBeVisible();
   await page.getByLabel("Exclure Compte001", { exact: true }).uncheck();
   await expect(continueButton).toBeDisabled();
-  await expect(page.getByText("733 comptes importés : 731 non exclus et 2 exclus.", {exact:true})).toBeVisible();
+  await expect(
+    page.getByText("733 comptes importés : 731 non exclus et 2 exclus.", {
+      exact: true,
+    }),
+  ).toBeVisible();
   await excludeButton.click();
   await expect(continueButton).toBeEnabled();
-  await expect(page.getByText("733 comptes importés : 732 non exclus et 1 exclus.", {exact:true})).toBeVisible();
+  await expect(
+    page.getByText("733 comptes importés : 732 non exclus et 1 exclus.", {
+      exact: true,
+    }),
+  ).toBeVisible();
   await expect(page.locator("footer")).toContainText("Mathieu Denel WMFR");
-  expect(await excludeButton.evaluate((button) => Boolean(button.compareDocumentPosition(document.querySelector("button.primary:disabled") || button.nextElementSibling?.nextElementSibling!) & Node.DOCUMENT_POSITION_FOLLOWING))).toBeTruthy();
+  expect(
+    await excludeButton.evaluate((button) =>
+      Boolean(
+        button.compareDocumentPosition(
+          document.querySelector("button.primary:disabled") ||
+            button.nextElementSibling?.nextElementSibling!,
+        ) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ),
+    ),
+  ).toBeTruthy();
 
   await page
     .getByRole("button", { name: "Page suivante", exact: true })

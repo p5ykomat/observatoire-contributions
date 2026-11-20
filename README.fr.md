@@ -18,9 +18,15 @@ Un outil indépendant pour étudier les contributions publiques après une forma
 
 Le changement de langue conserve l’analyse en cours. Réintégrer des comptes exclus ou élargir la sélection peut nécessiter une collecte complémentaire. Changer les dates ou les projets à collecter exige une nouvelle collecte.
 
+## Event Registration
+
+Une URL de page d’événement ou de `Special:EventDetails` permet d’importer les inscriptions publiques via l’[API CampaignEvents](https://www.mediawiki.org/w/index.php?api=campaignevents.v0&title=Special:RestSandbox). Toutes les pages disponibles sont parcourues. Les inscriptions privées ne sont pas demandées. Les organisateurs publics sont identifiés séparément et exclus par défaut, avec la possibilité de les réintégrer. Un échec conserve les pages déjà chargées pour reprendre dans la même page.
+
+Dans **Paramétrer**, confirmez ou corrigez les dates avant la collecte. Les horaires et le fuseau fournis sont affichés, puis convertis en UTC pour l’analyse. Corriger ces dates ne modifie pas l’événement source. Les projets de contribution déclarés sont proposés et restent modifiables : une page d’inscription hébergée sur Meta ne signifie pas que les contributions ont lieu sur Meta. Le JSON conserve la provenance, les dates originales et la confirmation des dates de l’analyse ; les CSV et PDF indiquent la source publique.
+
 ## Nouveaux inscrits sur Wikipédia en français
 
-La quatrième source d’import charge les comptes créés un jour précis ou entre deux dates incluses. Le module utilise les actions `create`, `create2` et `byemail` du journal public. Les IP, les comptes temporaires (actifs ou expirés) et les rattachements automatiques sont exclus. Le compte créé est identifié à partir de la cible du journal, pas du compte qui a effectué la création. Les identifiants locaux permettent de retrouver les comptes renommés lorsqu’ils sont disponibles.
+Cette source d’import charge les comptes créés un jour précis ou entre deux dates incluses. Le module utilise les actions `create`, `create2` et `byemail` du journal public. Les IP, les comptes temporaires (actifs ou expirés) et les rattachements automatiques sont exclus. Le compte créé est identifié à partir de la cible du journal, pas du compte qui a effectué la création. Les identifiants locaux permettent de retrouver les comptes renommés lorsqu’ils sont disponibles.
 
 Le format pris en charge commence le **18 avril 2006**, premier jour UTC complet après l’apparition de l’action `create` dans le journal de Wikipédia en français. Des entrées plus anciennes existent depuis septembre 2005, mais leur format n’est pas pris en charge. Les dates d’unification CentralAuth, parfois postérieures à l’inscription locale, ne remplacent pas la date du journal. Une date globale antérieure à l’inscription locale révèle un compte déjà existant. Les entrées masquées ou les comptes introuvables sont signalés et restent hors du groupe analysable.
 
@@ -28,7 +34,7 @@ Après import, choisissez l’observation depuis l’inscription propre à chaqu
 
 Les comptes identifiés comme bots sont exclus par défaut. La case d’exclusion des modifications marquées bot ou automatisées est visible et cochée par défaut dans ce parcours. Les compteurs de collecte sont actualisés toutes les deux secondes, sans requête supplémentaire. La recherche des projets où les comptes contribuent est affichée séparément du nombre de comptes entièrement traités.
 
-L’interface donne une estimation fixe d’environ 17 minutes pour examiner les projets de contribution de 1 000 comptes. Elle correspond à l’hypothèse d’un appel d’une seconde par compte, soit 16 min 40, et ne constitue pas une durée mesurée. La récupération des modifications ajoute un temps variable.
+Les contributions sont comptées dès l’instant de création de chaque compte, y compris le jour même, et non à partir de J+1. La durée de collecte dépend des projets et de l’activité des comptes ; aucune durée fixe n’est annoncée.
 
 Les types de pages choisis filtrent uniquement Wikipédia. Tous les types de révisions publiques des autres projets sont pris en compte. Une contribution est une révision publique, y compris sur Commons, et non chaque opération de téléversement ou chaque entrée de journal.
 
@@ -38,7 +44,7 @@ Le chargement suit toutes les pages du journal, puis vérifie les comptes par lo
 
 ## Comprendre les résultats
 
-La liste des contributeurs précède les thématiques. Elle se trie par nombre de contributions ou par date de dernière contribution, dans les deux sens.
+La liste des contributeurs précède les thématiques. Repliée au départ, elle affiche uniquement les comptes ayant contribué. Les en-têtes permettent de trier par pseudo, nombre de contributions ou date de dernière contribution, dans les deux sens. L’affichage de tous les comptes reste disponible pour vérifier les absences d’activité et les exclusions.
 
 La collecte recherche automatiquement les métadonnées publiques des créations et modifications d’articles Wikipédia ensuite supprimés. Deux cases, cochées par défaut dans les résultats, permettent de les inclure ou de les exclure séparément. Les nombres, pourcentages, listes et graphiques se recalculent sans nouvelle requête. Les modifications annulées sur un article conservé restent comptées, indépendamment de ces deux cases.
 
@@ -59,6 +65,14 @@ Le bilan est cumulé du lendemain de la fin de l’événement jusqu’à l’é
 Une échéance future ou une collecte incomplète ne produit pas de taux définitif. Une absence d’observation n’est pas considérée comme une preuve d’inactivité. Les dates sont en UTC. Version méthodologique : **1.0**.
 
 Les contributions sont des révisions publiques, pas le volume de texte ajouté ni un inventaire complet des téléversements ou journaux. Les révisions annulées restent des révisions observées. Le statut de nouveau compte dépend de la fenêtre de création sélectionnée ; un pseudo contenant « bot » ne suffit pas à identifier un bot.
+
+## Enterprise et classement thématique
+
+La [documentation officielle](https://meta.wikimedia.org/wiki/Wikimedia_Enterprise/Access) permet les appels à Enterprise sans compte ni en-tête d’autorisation depuis les serveurs Toolforge, Cloud VPS ou PAWS. Cela ne s’applique pas automatiquement au navigateur, à un ordinateur local ou à Vercel. L’accès depuis Toolforge reste à vérifier sur le déploiement réel.
+
+Le [schéma Enterprise](https://enterprise.wikimedia.com/docs/data-dictionary/) apporte du contenu structuré, des catégories éditoriales, des métadonnées et des signaux sur les révisions. Les catégories ne sont pas les 64 thèmes du modèle `outlink-topic-model`. Aucun champ équivalent n’a été trouvé dans le schéma consulté. Enterprise n’est donc pas utilisé comme remplacement automatique de Lift Wing et ne remplace pas la recherche historique des contributions par compte. Une panne du classement thématique laisse les comptes, les totaux de contributions, les filtres et les exports de rétention utilisables.
+
+Questions préparées pour la Fondation, sans envoi automatique : existe-t-il un classement thématique Enterprise comparable à `outlink-topic-model` ? Quels modèle, version, taxonomie et langues utilise-t-il, notamment pour les articles récents ? Quels débits et règles de cache s’appliquent à l’accès sans authentification depuis Toolforge ? Les catégories seraient utiles pour un enrichissement facultatif, mais leur regroupement en grandes thématiques demanderait une méthode distincte et évaluée.
 
 ## Sources et limites
 

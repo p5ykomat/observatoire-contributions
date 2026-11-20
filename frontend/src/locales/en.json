@@ -313,7 +313,7 @@
   "noParticipantsResults": "No participant matches the current filters. Data is preserved. Return to Settings to check the event dates, new account window and exclusions.",
   "participantTableHelp": "“Contributions after the event” counts eligible creations or edits observed for each account, even when excluded from the summary. Charts and totals use only included participants.",
   "confirmEventDates": "Confirm or replace the event dates supplied by the Dashboard before collection.",
-  "eventDatesHelp": "Enter the event start and end here, before collection. For a one-day event, enter the same date in both fields. These dates apply only to this analysis: the Dashboard stays unchanged and no administrator access is needed. Contributions will be tracked after the event ends up to today.",
+  "eventDatesHelp": "Enter the actual activity start and end before collection. For a one-day activity, use the same date in both fields. These dates apply only to this analysis: the source stays unchanged and no administrator access is needed. Contributions will be tracked after the activity ends.",
   "dashboardDatesQuestion": "Do the Dashboard dates match the event?",
   "useDashboardDates": "Yes, use these dates",
   "customEventDates": "No, enter the actual dates below",
@@ -427,7 +427,8 @@
     "contributions_desc": "Contribution count: highest to lowest",
     "contributions_asc": "Contribution count: lowest to highest",
     "last_desc": "Last contribution: newest to oldest",
-    "last_asc": "Last contribution: oldest to newest"
+    "last_asc": "Last contribution: oldest to newest",
+    "by": "Sort by {{column}}"
   },
   "deleted": {
     "title": "Contributions to subsequently deleted articles",
@@ -565,10 +566,12 @@
       "western_africa": "Western Africa",
       "southern_africa": "Southern Africa",
       "central_africa": "Central Africa"
-    }
+    },
+    "independent": "This beta analysis is optional. A topic model outage does not block contribution counts or retention calculations.",
+    "enterprise": "Wikimedia Enterprise provides article categories, among other metadata. Its documented schema does not provide a direct equivalent of this model’s 64 topics; changing APIs therefore does not guarantee better classification.",
+    "enterpriseLink": "Read about Enterprise access from Toolforge"
   },
   "newAccounts": {
-    "source": "New import source",
     "title": "New registrations on French Wikipedia",
     "intro": "Build a cohort from the public account creation log.",
     "open": "Choose registration dates",
@@ -625,7 +628,6 @@
     "automationHelp": "Accounts identified as bots are excluded by default. This checkbox, enabled by default, also excludes edits flagged as bot or automated made by other accounts.",
     "preparationProgress": "Finding contribution projects: {{done}} of {{total}} accounts examined.",
     "progressRefresh": "Counters refresh every two seconds. A public source request may take longer.",
-    "durationInfo": "Info: allow roughly 17 minutes to examine the contribution projects of 1,000 accounts, plus extra time to retrieve their edits. This is an indicative estimate and depends on API response times.",
     "fileLimit": "TXT and CSV files up to 50 MB are accepted.",
     "allProjects": "{{count}} public catalogue projects will be observed, across all their languages. Only projects where the account has contributions are queried.",
     "resultTitle": "How many new accounts contributed?",
@@ -656,6 +658,32 @@
     "familyHelp": "Accounts with at least one edit, by project family. Percentages use all retained accounts as the denominator. An account may contribute on several projects.",
     "accountUnit": "Accounts",
     "percentageAccounts": "Percentage of the {{count}} retained accounts.",
-    "invalidFile": "The cohort file is invalid. Use the CSV exported by the module without changing its dates or identifiers."
+    "invalidFile": "The cohort file is invalid. Use the CSV exported by the module without changing its dates or identifiers.",
+    "sameDay": "Contributions count from each account’s exact creation time, including that same day. Observation does not start the next day."
+  },
+  "eventRegistration": {
+    "intro": "Import public participants from an event using CampaignEvents.",
+    "url": "Event page or Special:EventDetails link",
+    "privacy": "Only public registrations are imported. Organizers are identified and excluded by default; you can include them again.",
+    "apiLink": "Read the CampaignEvents API documentation",
+    "invalid": "Enter an HTTPS event link on a Wikimedia project.",
+    "failed": "Import stopped. Check that the link opens a page with Event Registration, then resume or change the link.",
+    "progress": "Importing: {{count}} identifiable public participants; {{organizers}} organizers identified.",
+    "loaded": "Import complete: {{count}} identifiable public participants; {{organizers}} organizers excluded by default.",
+    "load": "Load public participants",
+    "resume": "Resume import",
+    "use": "Use this list",
+    "change": "Change link",
+    "unavailable": "Public entries without an identifiable account: {{count}}. They are outside the analysable list.",
+    "dateCheck": "Event Registration gives a start of {{start_local}} and an end of {{end_local}}, in the {{timezone}} time zone.",
+    "utcDates": "Proposed UTC analysis dates: {{start}} to {{end}}. Check the actual activity period, which can differ from the registration period.",
+    "datesQuestion": "Do these dates match the activity you want to analyse?",
+    "future": "This event has not ended yet. Post-event observation can be performed after it ends. Correct the dates only if the supplied dates are wrong.",
+    "originsHelp": "Choose the projects of the activity. A registration page hosted on Meta does not mean contributions take place on Meta. Declared projects are suggested and remain editable.",
+    "resultSource": "Source: public Event Registration entries. Private registrations are outside this group."
+  },
+  "contributorList": {
+    "count_one": "{{count}} account contributed",
+    "count": "{{count}} accounts contributed"
   }
 }

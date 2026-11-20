@@ -251,6 +251,28 @@ const schema = z.object({
     })
     .optional(),
   deleted_collection_version: z.literal(1).optional(),
+  event_registration: z
+    .object({
+      id: z.number().int().positive(),
+      project: z.string().min(1).max(100),
+      title: z.string().max(1000),
+      url: z.url().refine((value) => new URL(value).protocol === "https:"),
+      page_url: z.url().refine((value) => new URL(value).protocol === "https:"),
+      start: day,
+      end: day,
+      starts_at: z.string().datetime({ offset: true }),
+      ends_at: z.string().datetime({ offset: true }),
+      timezone: z.string().max(100),
+      start_local: z.string().max(40),
+      end_local: z.string().max(40),
+      projects: z.array(z.string()).max(5000),
+      all_projects: z.boolean(),
+      public_only: z.literal(true),
+      dates_confirmed: z.boolean(),
+      unavailable: z.number().int().nonnegative(),
+      imported_at: z.string().datetime({ offset: true }),
+    })
+    .optional(),
   article_topics: z
     .record(
       z.string(),
@@ -286,6 +308,7 @@ export function importArchive(text: string): Session {
     const s = schema.parse(JSON.parse(text));
     if (
       Boolean(s.params.observation) !== Boolean(s.new_accounts) ||
+      (s.new_accounts && s.event_registration) ||
       (s.new_accounts && (!s.question || s.cohort.some((a) => !a.signup)))
     )
       throw new Error();

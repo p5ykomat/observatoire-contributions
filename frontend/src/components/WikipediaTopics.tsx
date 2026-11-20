@@ -170,10 +170,21 @@ export function WikipediaTopics({
     <section className="panel wikipedia-topics" aria-labelledby="topics-title">
       <h2 id="topics-title">{t("topics.title")}</h2>
       <p>{t("topics.intro")}</p>
+      <p className="hint">{t("topics.independent")}</p>
       <details className="topic-method">
         <summary>{t("topics.methodTitle")}</summary>
         <p>{t("topics.method")}</p>
         <p>{t("topics.methodLimits")}</p>
+        <p>{t("topics.enterprise")}</p>
+        <p>
+          <a
+            href="https://meta.wikimedia.org/wiki/Wikimedia_Enterprise/Access"
+            target="_blank"
+            rel="noreferrer"
+          >
+            {t("topics.enterpriseLink")}
+          </a>
+        </p>
         <a
           href="https://meta.wikimedia.org/wiki/Machine_learning_models/Production/Language_agnostic_link-based_article_topic"
           target="_blank"

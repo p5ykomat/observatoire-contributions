@@ -13,6 +13,11 @@ from backend.providers.catalog import CatalogProvider
 from backend.providers.centralauth import CentralAuthProvider
 from backend.providers.dashboard import DashboardProvider
 from backend.providers.deleted_contributions import DeletedContributionsProvider
+from backend.providers.event_registration import (
+    EventAccountsRequest,
+    EventRegistrationProvider,
+    EventRequest,
+)
 from backend.providers.mediawiki import MediaWikiContributionsProvider
 from backend.providers.new_accounts import (
     NewAccountsProvider,
@@ -126,6 +131,16 @@ async def local_accounts(body: BatchRequest, request: Request):
 @app.post("/api/dashboard")
 async def dashboard(body: DashboardRequest, request: Request):
     return await DashboardProvider(providers(request)[0]).course(body.url)
+
+
+@app.post("/api/event-registration")
+async def event_registration(body: EventRequest, request: Request):
+    return await EventRegistrationProvider(*providers(request)).event(body)
+
+
+@app.post("/api/event-registration/accounts")
+async def event_accounts(body: EventAccountsRequest, request: Request):
+    return await EventRegistrationProvider(*providers(request)).accounts(body)
 
 
 @app.post("/api/new-accounts")

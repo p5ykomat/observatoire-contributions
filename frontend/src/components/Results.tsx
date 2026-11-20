@@ -121,6 +121,8 @@ export function Results({
         b.account.username,
         i18n.resolvedLanguage,
       );
+      if (sort.startsWith("username"))
+        return sort.endsWith("desc") ? -name : name;
       if (sort.startsWith("contributions"))
         return (
           (sort.endsWith("desc")
@@ -134,6 +136,44 @@ export function Results({
           : a.last.localeCompare(b.last)) || name
       );
     });
+  function sortColumn(column: "username" | "contributions" | "last") {
+    setSort((previous) =>
+      previous === column + "_desc"
+        ? column + "_asc"
+        : previous === column + "_asc"
+          ? column + "_desc"
+          : column + (column === "username" ? "_asc" : "_desc"),
+    );
+    setPage(0);
+  }
+  function sortHeading(
+    column: "username" | "contributions" | "last",
+    label: string,
+  ) {
+    const active = sort.startsWith(column + "_");
+    return (
+      <th
+        className="sortable-column"
+        scope="col"
+        key={column}
+        aria-sort={
+          active ? (sort.endsWith("desc") ? "descending" : "ascending") : "none"
+        }
+      >
+        <button
+          className="column-sort"
+          type="button"
+          onClick={() => sortColumn(column)}
+          aria-label={t("contributorSort.by", { column: label })}
+        >
+          {label}
+          <span aria-hidden="true">
+            {active ? (sort.endsWith("desc") ? "↓" : "↑") : "↕"}
+          </span>
+        </button>
+      </th>
+    );
+  }
   const totalPages = Math.max(1, Math.ceil(filtered.length / 25));
   const currentPage = Math.min(page, totalPages - 1);
   const outcome = (row: FollowupResult["rows"][number]) =>
@@ -158,6 +198,18 @@ export function Results({
         </div>
         <button onClick={() => exportJSON(session)}>{t("json")}</button>
       </div>
+      {session.event_registration && (
+        <p className="notice">
+          {t("eventRegistration.resultSource")}{" "}
+          <a
+            href={session.event_registration.url}
+            target="_blank"
+            rel="noreferrer"
+          >
+            {session.event_registration.title}
+          </a>
+        </p>
+      )}
       <section
         className="panel followup-question"
         aria-labelledby="question-title"
@@ -533,240 +585,227 @@ export function Results({
         />
       </div>
       <section className="panel" aria-labelledby="contributor-list-title">
-        <h2 id="contributor-list-title">{t("detail")}</h2>
-        <p>{t("fup.tableHelp")}</p>
-        <label>
-          <span id="contributor-sort-label">{t("contributorSort.title")}</span>
-          <select
-            aria-labelledby="contributor-sort-label"
-            value={sort}
-            onChange={(event) => {
-              setSort(event.target.value);
-              setPage(0);
-            }}
-          >
-            {[
-              "contributions_desc",
-              "contributions_asc",
-              "last_desc",
-              "last_asc",
-            ].map((value) => (
-              <option key={value} value={value}>
-                {t("contributorSort." + value)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          {t("fup.listView")}
-          <select
-            id="contributor-list-view"
-            value={view}
-            onChange={(event) => {
-              setView(event.target.value);
-              setPage(0);
-            }}
-          >
-            <option value="contributing">{t("fup.contributorsOnly")}</option>
-            <option value="all">{t("fup.allAccounts")}</option>
-          </select>
-        </label>
-        <label>
-          {t("search")}
-          <input
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(0);
-            }}
-          />
-        </label>
-        <div className="table-scroll">
-          <table className="participant-table followup-table">
-            <caption>{t("fup.tableCaption")}</caption>
-            <thead>
-              <tr>
-                {[
-                  t("excludeQuestion"),
-                  t("username"),
-                  t("fup.outcome"),
-                  t("contributions"),
-                  t("last"),
-                ].map((label) => (
-                  <th scope="col" key={label}>
-                    {label}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filtered
-                .slice(currentPage * 25, currentPage * 25 + 25)
-                .map((row) => (
-                  <Fragment key={row.account.username}>
-                    <tr>
-                      <td data-label={t("excludeQuestion")}>
-                        <input
-                          type="checkbox"
-                          aria-label={t("excludeAccount", {
-                            name: row.account.username,
-                          })}
-                          checked={!row.account.included}
-                          onChange={() => {
-                            toggle(row.account.username);
-                            if (view === "contributing")
-                              document
-                                .getElementById("contributor-list-view")
-                                ?.focus();
-                          }}
-                        />
-                      </td>
-                      <td data-label={t("username")}>
-                        <button
-                          className="link"
-                          id={`account-toggle-${encodeURIComponent(row.account.username)}`}
-                          aria-expanded={detail === row.account.username}
-                          aria-controls={
-                            detail === row.account.username
-                              ? `account-detail-${encodeURIComponent(row.account.username)}`
-                              : undefined
-                          }
-                          onClick={() =>
-                            setDetail(
-                              detail === row.account.username
-                                ? null
-                                : row.account.username,
-                            )
-                          }
-                        >
-                          {row.account.username}
-                        </button>
-                      </td>
-                      <td data-label={t("fup.outcome")}>
-                        <strong>{outcome(row)}</strong>
-                        <small className="category-example">
-                          {row.projects
-                            .map(
-                              (id) =>
-                                session.catalog.find((p) => p.id === id)
-                                  ?.domain ?? id,
-                            )
-                            .join(", ")}
-                        </small>
-                      </td>
-                      <td data-label={t("contributions")}>
-                        {format(row.edits.length)}
-                      </td>
-                      <td data-label={t("last")}>
-                        {row.last?.slice(0, 10) ?? t("fup.noObserved")}
-                      </td>
-                    </tr>
-                    {detail === row.account.username && (
-                      <tr className="contributor-detail-row">
-                        <td colSpan={5}>
-                          <section
-                            className="individual"
-                            id={`account-detail-${encodeURIComponent(row.account.username)}`}
-                            aria-label={t("fup.accountDetails", {
-                              name: row.account.username,
-                            })}
-                          >
-                            <div className="section-heading">
-                              <h3>{row.account.username}</h3>
-                              <button
-                                onClick={() => {
-                                  setDetail(null);
+        <details className="contributor-disclosure">
+          <summary className="contributors-summary">
+            <h2 id="contributor-list-title">{t("detail")}</h2>
+            <span>{t("contributorList.count", { count: r.active })}</span>
+          </summary>
+          <div className="contributor-list-content">
+            <p>{t("fup.tableHelp")}</p>
+            <label>
+              {t("fup.listView")}
+              <select
+                id="contributor-list-view"
+                value={view}
+                onChange={(event) => {
+                  setView(event.target.value);
+                  setPage(0);
+                }}
+              >
+                <option value="contributing">
+                  {t("fup.contributorsOnly")}
+                </option>
+                <option value="all">{t("fup.allAccounts")}</option>
+              </select>
+            </label>
+            <label>
+              {t("search")}
+              <input
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(0);
+                }}
+              />
+            </label>
+            <div className="table-scroll">
+              <table className="participant-table followup-table">
+                <caption>{t("fup.tableCaption")}</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">{t("excludeQuestion")}</th>
+                    {sortHeading("username", t("username"))}
+                    <th scope="col">{t("fup.outcome")}</th>
+                    {sortHeading("contributions", t("contributions"))}
+                    {sortHeading("last", t("last"))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered
+                    .slice(currentPage * 25, currentPage * 25 + 25)
+                    .map((row) => (
+                      <Fragment key={row.account.username}>
+                        <tr>
+                          <td data-label={t("excludeQuestion")}>
+                            <input
+                              type="checkbox"
+                              aria-label={t("excludeAccount", {
+                                name: row.account.username,
+                              })}
+                              checked={!row.account.included}
+                              onChange={() => {
+                                toggle(row.account.username);
+                                if (view === "contributing")
                                   document
-                                    .getElementById(
-                                      `account-toggle-${encodeURIComponent(row.account.username)}`,
-                                    )
+                                    .getElementById("contributor-list-view")
                                     ?.focus();
-                                }}
+                              }}
+                            />
+                          </td>
+                          <td data-label={t("username")}>
+                            <button
+                              className="link"
+                              id={`account-toggle-${encodeURIComponent(row.account.username)}`}
+                              aria-expanded={detail === row.account.username}
+                              aria-controls={
+                                detail === row.account.username
+                                  ? `account-detail-${encodeURIComponent(row.account.username)}`
+                                  : undefined
+                              }
+                              onClick={() =>
+                                setDetail(
+                                  detail === row.account.username
+                                    ? null
+                                    : row.account.username,
+                                )
+                              }
+                            >
+                              {row.account.username}
+                            </button>
+                          </td>
+                          <td data-label={t("fup.outcome")}>
+                            <strong>{outcome(row)}</strong>
+                            <small className="category-example">
+                              {row.projects
+                                .map(
+                                  (id) =>
+                                    session.catalog.find((p) => p.id === id)
+                                      ?.domain ?? id,
+                                )
+                                .join(", ")}
+                            </small>
+                          </td>
+                          <td data-label={t("contributions")}>
+                            {format(row.edits.length)}
+                          </td>
+                          <td data-label={t("last")}>
+                            {row.last?.slice(0, 10) ?? t("fup.noObserved")}
+                          </td>
+                        </tr>
+                        {detail === row.account.username && (
+                          <tr className="contributor-detail-row">
+                            <td colSpan={5}>
+                              <section
+                                className="individual"
+                                id={`account-detail-${encodeURIComponent(row.account.username)}`}
+                                aria-label={t("fup.accountDetails", {
+                                  name: row.account.username,
+                                })}
                               >
-                                {t("close")}
-                              </button>
-                            </div>
-                            <p>
-                              {outcome(row)} · {format(row.edits.length)}{" "}
-                              {t("contributions")}
-                            </p>
-                            <h4>{t("fup.publicHistory")}</h4>
-                            <p className="hint">{t("fup.publicHistoryHelp")}</p>
-                            <ul className="contribution-links">
-                              {contributionLinks(
-                                session,
-                                row.account.username,
-                              ).map(({ project, href }) => (
-                                <li key={project.id}>
-                                  <a
-                                    href={href}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
+                                <div className="section-heading">
+                                  <h3>{row.account.username}</h3>
+                                  <button
+                                    onClick={() => {
+                                      setDetail(null);
+                                      document
+                                        .getElementById(
+                                          `account-toggle-${encodeURIComponent(row.account.username)}`,
+                                        )
+                                        ?.focus();
+                                    }}
                                   >
-                                    {t("fup.historyOn", {
-                                      project: project.domain,
-                                    })}
-                                  </a>
-                                </li>
-                              ))}
-                            </ul>
-                            <h4>{t("fup.periodHistory")}</h4>
-                            <p className="hint">{t("timelineLimit")}</p>
-                            <ul className="contribution-timeline">
-                              {row.edits
-                                .slice(-100)
-                                .reverse()
-                                .map((edit) => (
-                                  <li key={edit.project + ":" + edit.revision}>
-                                    <time dateTime={edit.timestamp}>
-                                      {edit.timestamp.slice(0, 10)}
-                                    </time>
-                                    <span>
-                                      {session.catalog.find(
-                                        (project) =>
-                                          project.id === edit.project,
-                                      )?.domain ?? edit.project}
-                                    </span>
-                                    <span>
-                                      {edit.title}
-                                      {edit.deleted_page && (
-                                        <small className="category-example">
-                                          {t("deleted.revision")}
-                                        </small>
-                                      )}
-                                    </span>
-                                  </li>
-                                ))}
-                            </ul>
-                            {row.edits.length === 0 && (
-                              <p>{t("fup.noObserved")}</p>
-                            )}
-                          </section>
-                        </td>
-                      </tr>
-                    )}
-                  </Fragment>
-                ))}
-            </tbody>
-          </table>
-        </div>
-        {filtered.length === 0 && <p role="status">{t("fup.emptyList")}</p>}
-        <div className="actions">
-          <button
-            disabled={currentPage === 0}
-            onClick={() => setPage(currentPage - 1)}
-          >
-            {t("previous")}
-          </button>
-          <span>{t("page", { page: currentPage + 1, total: totalPages })}</span>
-          <button
-            disabled={currentPage >= totalPages - 1}
-            onClick={() => setPage(currentPage + 1)}
-          >
-            {t("next")}
-          </button>
-        </div>
-        <p className="hint">{t("fup.renameHelp")}</p>
+                                    {t("close")}
+                                  </button>
+                                </div>
+                                <p>
+                                  {outcome(row)} · {format(row.edits.length)}{" "}
+                                  {t("contributions")}
+                                </p>
+                                <h4>{t("fup.publicHistory")}</h4>
+                                <p className="hint">
+                                  {t("fup.publicHistoryHelp")}
+                                </p>
+                                <ul className="contribution-links">
+                                  {contributionLinks(
+                                    session,
+                                    row.account.username,
+                                  ).map(({ project, href }) => (
+                                    <li key={project.id}>
+                                      <a
+                                        href={href}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                      >
+                                        {t("fup.historyOn", {
+                                          project: project.domain,
+                                        })}
+                                      </a>
+                                    </li>
+                                  ))}
+                                </ul>
+                                <h4>{t("fup.periodHistory")}</h4>
+                                <p className="hint">{t("timelineLimit")}</p>
+                                <ul className="contribution-timeline">
+                                  {row.edits
+                                    .slice(-100)
+                                    .reverse()
+                                    .map((edit) => (
+                                      <li
+                                        key={edit.project + ":" + edit.revision}
+                                      >
+                                        <time dateTime={edit.timestamp}>
+                                          {edit.timestamp.slice(0, 10)}
+                                        </time>
+                                        <span>
+                                          {session.catalog.find(
+                                            (project) =>
+                                              project.id === edit.project,
+                                          )?.domain ?? edit.project}
+                                        </span>
+                                        <span>
+                                          {edit.title}
+                                          {edit.deleted_page && (
+                                            <small className="category-example">
+                                              {t("deleted.revision")}
+                                            </small>
+                                          )}
+                                        </span>
+                                      </li>
+                                    ))}
+                                </ul>
+                                {row.edits.length === 0 && (
+                                  <p>{t("fup.noObserved")}</p>
+                                )}
+                              </section>
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+            {filtered.length === 0 && <p role="status">{t("fup.emptyList")}</p>}
+            <div className="actions">
+              <button
+                disabled={currentPage === 0}
+                onClick={() => setPage(currentPage - 1)}
+              >
+                {t("previous")}
+              </button>
+              <span>
+                {t("page", { page: currentPage + 1, total: totalPages })}
+              </span>
+              <button
+                disabled={currentPage >= totalPages - 1}
+                onClick={() => setPage(currentPage + 1)}
+              >
+                {t("next")}
+              </button>
+            </div>
+            <p className="hint">{t("fup.renameHelp")}</p>
+          </div>
+        </details>
       </section>
       <WikipediaTopics session={session} result={r} save={saveTopics} />
       <section className="panel">

@@ -55,7 +55,6 @@ export function NewAccountsImport({
       className="panel new-accounts-import"
       aria-labelledby="new-accounts-title"
     >
-      <p className="eyebrow">{t("newAccounts.source")}</p>
       <h2 id="new-accounts-title">{t("newAccounts.title")}</h2>
       <p>{t("newAccounts.intro")}</p>
       <details>
@@ -106,6 +105,7 @@ export function NewAccountsImport({
               </label>
             )}
           </div>
+          <p className="hint">{t("newAccounts.sameDay")}</p>
           <p className="hint">{t("newAccounts.history")}</p>
           <p className="hint">{t("newAccounts.exclusions")}</p>
         </fieldset>
