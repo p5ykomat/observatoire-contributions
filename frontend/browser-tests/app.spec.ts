@@ -163,6 +163,7 @@ async function analyzed(page: Page) {
   await expect(
     page.getByRole("heading", { name: "Atelier de janvier", exact: true }),
   ).toBeVisible();
+  await page.locator(".results-settings > summary").click();
   await page.getByRole("button", { name: "Aujourd’hui", exact: true }).click();
   await page.locator(".contributors-summary").click();
   // Audit the final selected state, after the button's background transition.
@@ -1078,16 +1079,6 @@ test("anglais et retour français conservent l’analyse, ses totaux et ses appe
     page.getByLabel("Exclude Machine", { exact: true }),
   ).toBeChecked();
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
-  await page.setViewportSize({ width: 390, height: 844 });
-  await expect
-    .poll(() =>
-      page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
-    )
-    .toBe(true);
-  await page.screenshot({
-    path: "../output/results-en-mobile.png",
-    fullPage: true,
-  });
   await page.getByLabel("Language", { exact: true }).selectOption("fr");
   await expect(
     page
@@ -1231,12 +1222,6 @@ test("échéance future expliquée, liste des contributeurs et retour à Aujourd
     path: "../output/results-deadline-desktop.png",
     fullPage: true,
   });
-  await page.setViewportSize({ width: 320, height: 900 });
-  await expect
-    .poll(() =>
-      page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
-    )
-    .toBe(true);
   await page.getByLabel("Langue", { exact: true }).selectOption("en");
   await expect(help).toHaveText(
     "If J+X falls after today, choose “Today” to avoid errors.",
@@ -1246,12 +1231,12 @@ test("échéance future expliquée, liste des contributeurs et retour à Aujourd
   ).toBeVisible();
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   await page.screenshot({
-    path: "../output/results-deadline-en-mobile.png",
+    path: "../output/results-deadline-en-desktop.png",
     fullPage: true,
   });
   await page
     .locator(".followup-question")
-    .screenshot({ path: "../output/deadline-question-en-mobile.png" });
+    .screenshot({ path: "../output/deadline-question-en-desktop.png" });
 });
 
 test("dates modifiables dans Paramétrer sans modifier le Dashboard ni collecter", async ({
@@ -1564,20 +1549,14 @@ test("un échec réel nomme seulement le compte concerné et disparaît après r
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   await mkdir("../output", { recursive: true });
   await error.screenshot({ path: "../output/collection-failure-fr.png" });
-  await page.setViewportSize({ width: 320, height: 900 });
   await page.getByLabel("Langue", { exact: true }).selectOption("en");
   await expect(error).toContainText(
     "One account’s contributions could not be fully retrieved",
   );
   await expect(error.getByRole("listitem")).toHaveText(["Bob"]);
-  await expect
-    .poll(() =>
-      page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
-    )
-    .toBe(true);
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   await error.screenshot({
-    path: "../output/collection-failure-en-mobile.png",
+    path: "../output/collection-failure-en-desktop.png",
   });
   await page.getByLabel("Language", { exact: true }).selectOption("fr");
   await expect(
@@ -1592,7 +1571,7 @@ test("un échec réel nomme seulement le compte concerné et disparaît après r
   unavailable = false;
   await page
     .getByRole("button", {
-      name: "Réessayer les comptes incomplets",
+      name: "Collecter les données manquantes pour cette sélection",
       exact: true,
     })
     .click();
@@ -1711,7 +1690,7 @@ for (const fallback of [false, true]) {
     unavailable = false;
     await page
       .getByRole("button", {
-        name: "Réessayer les comptes incomplets",
+        name: "Collecter les données manquantes pour cette sélection",
         exact: true,
       })
       .click();
@@ -1826,19 +1805,13 @@ test("liste filtrée par échéance et projet, fiches en ligne et historique pub
     path: "../output/contributor-list-fr-desktop.png",
     fullPage: true,
   });
-  await page.setViewportSize({ width: 320, height: 900 });
   await page.getByLabel("Langue", { exact: true }).selectOption("en");
   await expect(
     list.getByRole("link", { name: "All contributions on fr.wikipedia.org" }),
   ).toBeVisible();
-  await expect
-    .poll(() =>
-      page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
-    )
-    .toBe(true);
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   await page.screenshot({
-    path: "../output/contributor-list-en-mobile.png",
+    path: "../output/contributor-list-en-desktop.png",
     fullPage: true,
   });
 });

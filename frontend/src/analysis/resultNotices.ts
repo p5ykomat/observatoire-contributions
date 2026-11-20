@@ -25,7 +25,7 @@ export function resultNotices(
   if (!result.reached)
     add(result.future ? "futureDeadline" : "notReached", {
       date: result.end!,
-      observed: session.params.reference,
+      observed: result.collectedUntil ?? session.params.reference,
     });
   if (!result.scopeCovered) add("missingScope");
   if (!result.collection.current) {

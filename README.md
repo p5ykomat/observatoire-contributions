@@ -16,11 +16,11 @@ An independent tool for studying public contribution activity after a training s
 4. **Collect contributions**, with progress, pause, resume and cancellation. Cancellation retains data already collected in the current session.
 5. **Explore results** by follow-up period, project and contribution type. Export CSV, a reusable JSON analysis, PDF reports or PNG/SVG charts.
 
-Changing language preserves the current analysis. Reinstating excluded accounts or expanding the selection may require additional collection. Changing collection dates or projects requires a new collection.
+Changing language preserves the current analysis. Reinstating excluded accounts or expanding the selection may require additional collection. Narrowing the observed dates or projects recalculates results without new requests. When selected dates or projects have not been collected, a dedicated action retrieves missing data for that selection without automatically extending a historical period to today.
 
 ## Event Registration
 
-An event page or `Special:EventDetails` URL imports public registrations through the [CampaignEvents API](https://www.mediawiki.org/w/index.php?api=campaignevents.v0&title=Special:RestSandbox). All available pages are followed. Private registrations are never requested. Public organizers are identified separately and excluded by default; they can be included again. Failures preserve imported pages so the import can resume in the same page.
+An event page or `Special:EventDetails` URL imports public registrations through the [CampaignEvents API](https://www.mediawiki.org/w/index.php?api=campaignevents.v0&title=Special:RestSandbox). All available pages are followed. Private registrations are never requested: a person can hide their registration even when the event is public. This tool does not sign in with organizer permissions. Public organizers are identified separately and excluded by default; they can be included again. Failures preserve imported pages so the import can resume in the same page.
 
 In **Configure**, confirm or correct the dates before collection. Supplied times and their time zone are shown and converted to UTC for analysis. Corrections do not change the source event. Declared contribution projects are suggested and remain editable: hosting registration on Meta does not make Meta a contribution project. JSON preserves provenance, original dates and analysis-date confirmation; CSV and PDF identify the public source.
 
@@ -42,6 +42,14 @@ Every log page is followed and accounts are verified in batches of 50. Pause and
 
 ## Understanding the results
 
+The results page is designed for desktop use. Settings start collapsed so the observation summary appears first. The summary, charts, lists and calendars use the same filters. Contributing accounts have at least one eligible contribution in the selection. Accounts with no contributions are only classified as inactive when collection is complete. The incomplete-data category is hidden when its count is zero.
+
+**Contribution breakdown** shows contributions, their share and distinct accounts by project. Each contribution belongs to exactly one project, so shares sum to 100%. Accounts are deduplicated overall but may appear on multiple projects. Wikipedia article creations and edits are distinguished when their type is known. Expandable details provide page titles, usernames, UTC timestamps and public revision or deletion-log links.
+
+The initially collapsed **contribution calendar** shows daily volumes and details for a selected date. It displays one year at a time, supports leap years and long periods, and provides weekday totals or averages per observed weekday occurrence. Each account also has an expandable individual calendar. All dates and times use UTC. Missing data is distinguished from confirmed zero activity.
+
+**Other key figures** uses only observed contributions: active days, busiest day and UTC hour, mean per active account, accounts with exactly one contribution and accounts active across multiple wikis or project families. Percentages use contributing accounts as their denominator. This block does not report historical blocks, renames, deleted accounts or added-versus-removed byte counts.
+
 The contributor list appears above article topics, starts collapsed and initially shows only accounts with contributions. Column headings sort by username, contribution count or latest contribution date in either direction. Showing all accounts remains available to inspect inactivity and exclusions.
 
 Collection automatically retrieves public metadata for Wikipedia article creations and edits that were subsequently deleted. Two result checkboxes are enabled by default. Toggling them separately recalculates counts, percentages, lists and charts without additional requests. Reverted edits on articles that still exist remain counted independently of these checkboxes.
@@ -50,7 +58,9 @@ The observation interval applies to edit timestamps. Deleted status means the re
 
 In the results, **Analyse article topics** starts optional analysis of Wikipedia’s main namespace. Wikimedia’s multilingual [`outlink-topic-model`](https://meta.wikimedia.org/wiki/Machine_learning_models/Production/Language_agnostic_link-based_article_topic), served by Lift Wing, uses article links to estimate topics. Scores of at least 0.5 are retained. Topics concern the current article, not the text added or the historical version. Redirects, disambiguations and currently inaccessible pages are excluded.
 
-Choose creations (the default), edits or both, then contributors, distinct articles or contributions. Counts and percentages show their denominator. Topics are grouped into eight broad themes, plus any unknown themes; subtopics are optional. Units may appear in several topics, so percentages can sum to more than 100%. Model confidence scores are never treated as contribution percentages. Classification is beta and can be incorrect.
+Choose creations (the default), edits or both and start the analysis. The measure is always distinct articles, with counts, percentages and their denominator. Topics are grouped into eight broad themes, plus any unknown themes; subtopics are optional. Articles may appear in several topics, so percentages can sum to more than 100%. Model confidence scores are never treated as contribution percentages. Classification is beta and can be incorrect.
+
+The topic block starts collapsed. Changing the selection hides the old result until analysis is started again. Retrying unavailable articles only retries failures; restarting topic analysis from scratch requests every article in the current selection again without recollecting account contributions.
 
 Coverage distinguishes classified articles, articles with no recognised topic, unavailable sources and articles still to examine. Analysis follows the result filters and runs only on request, separately from contribution collection. Pause and resume preserve examined articles in the page; JSON preserves them after a pause or at completion. Topic CSV includes the measure, filter, denominator, period and model. A short explanation and the official model card are directly accessible in the interface.
 

@@ -130,8 +130,10 @@ export interface Session {
   diagnostics: string[];
   stage: number;
   collection_signature: string | null;
+  collection_params?: Params;
   question?: FollowupQuestion;
   article_topics?: Record<string, ArticleTopics>;
+  article_topics_kind?: "creation" | "modification" | "both";
   deleted_collection_version?: 1;
   event_registration?: EventRegistrationSource;
   new_accounts?: {

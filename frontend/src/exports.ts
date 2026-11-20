@@ -6,6 +6,7 @@ import i18n from "./i18n";
 import { analyzeFollowup } from "./analysis/followup";
 import { resultNotices } from "./analysis/resultNotices";
 import { registrationSummary } from "./analysis/registrationSummary";
+import { projectActivity, observedContributions } from "./analysis/activity";
 import type { Session } from "./types";
 import type { RegistrationImport } from "./registrationImporter";
 import { cohortFilename, cohortRows } from "./cohortFiles";
@@ -65,7 +66,17 @@ export function exportCSV(s: Session, summary = false) {
     event_end: s.params.end,
     analysis_start: r.start,
     analysis_end: r.end,
-    data_until: s.params.reference,
+    data_until: r.collectedUntil,
+    contribution_breakdown: projectActivity(
+      observedContributions(r),
+      s.catalog,
+    ).map(({ project, domain, count, percent, contributors }) => ({
+      project,
+      domain,
+      count,
+      percent,
+      contributors,
+    })),
     question: r.question,
     include_deleted_creations: r.question.include_deleted_creations,
     include_deleted_modifications: r.question.include_deleted_modifications,
@@ -223,9 +234,9 @@ export function makePDF(s: Session, nominative = false) {
       t("retained"),
       t("fup.contributing"),
       t("fup.not_contributing"),
-      t("fup.unknown"),
+      ...(r.unknown > 0 ? [t("fup.unknown")] : []),
     ],
-    [[r.n, r.active, r.inactive, r.unknown]],
+    [[r.n, r.active, r.inactive, ...(r.unknown > 0 ? [r.unknown] : [])]],
   );
   paragraph(
     r.complete
@@ -239,6 +250,18 @@ export function makePDF(s: Session, nominative = false) {
       : t("fup.minimum", { active: r.active, total: r.n }),
   );
   paragraph(t("totalEdits") + ": " + r.totalEdits);
+  heading(t("activity.title"));
+  paragraph(t("activity.help"));
+  table(
+    [t("activity.project"), t("contributions"), t("activity.share")],
+    projectActivity(observedContributions(r), s.catalog).map((p) => [
+      p.domain,
+      p.count,
+      p.percent.toLocaleString(i18n.resolvedLanguage, {
+        maximumFractionDigits: 1,
+      }) + " %",
+    ]),
+  );
   page(t("fup.projectTitle"));
   paragraph(t("fup.familyHelp"));
   for (const entry of r.byFamily) {
