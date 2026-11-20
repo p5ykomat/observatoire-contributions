@@ -381,6 +381,9 @@ test("contributor sorting and deleted-article filters update results and themes 
         ) & Node.DOCUMENT_POSITION_FOLLOWING,
     ),
   ).toBeTruthy();
+  await expect(list.locator("details")).not.toHaveAttribute("open", "");
+  await list.locator("summary").focus();
+  await page.keyboard.press("Enter");
   const names = () => list.locator("tbody button.link").allTextContents();
   expect(await names()).toEqual([
     "TestAccountA",
@@ -388,16 +391,29 @@ test("contributor sorting and deleted-article filters update results and themes 
     "NoContribution",
   ]);
   await list
-    .getByLabel("Trier les contributeurs")
-    .selectOption("contributions_asc");
+    .getByRole("button", { name: "Trier par Contributions", exact: true })
+    .click();
+  await expect(
+    list.getByRole("columnheader", { name: /Contributions/ }),
+  ).toHaveAttribute("aria-sort", "ascending");
   expect(await names()).toEqual([
     "NoContribution",
     "TestAccountA",
     "TestAccountB",
   ]);
-  await list.getByLabel("Trier les contributeurs").selectOption("last_desc");
+  await list
+    .getByRole("button", {
+      name: "Trier par Dernière contribution",
+      exact: true,
+    })
+    .click();
   expect((await names())[0]).toBe("TestAccountB");
-  await list.getByLabel("Trier les contributeurs").selectOption("last_asc");
+  await list
+    .getByRole("button", {
+      name: "Trier par Dernière contribution",
+      exact: true,
+    })
+    .click();
   expect((await names()).at(-1)).toBe("TestAccountB");
   await expect(
     section.getByLabel("Créations ou modifications", { exact: true }),
@@ -502,4 +518,58 @@ test("creation-only analysis uses the first observed revision to resolve old XTo
     .click();
   await expect(page.getByText("Articles examinés : 1 sur 1.")).toBeVisible();
   expect(revisions).toEqual([1]);
+});
+
+test("a Lift Wing outage leaves retention counts, filters and exports usable", async ({
+  page,
+}) => {
+  const s = fixture();
+  let modelCalls = 0;
+  const collectionCalls: string[] = [];
+  page.on("request", (request) => {
+    if (
+      /\/api\/(global-contributions|contributions|deleted-contributions)\b/.test(
+        request.url(),
+      )
+    )
+      collectionCalls.push(request.url());
+  });
+  await page.route("**/api/article-topics", async (route) => {
+    modelCalls++;
+    await route.fulfill({
+      status: 503,
+      json: { provider: "liftwing", retry_after: 0 },
+    });
+  });
+  await restore(page, s);
+  const section = page.locator(".wikipedia-topics");
+  await section
+    .getByRole("button", { name: "Analyser les thématiques des articles" })
+    .click();
+  await page.getByRole("button", { name: "J+30", exact: true }).click();
+  await expect(section.getByText(/Source indisponible : 1/)).toBeVisible({
+    timeout: 15000,
+  });
+  const download = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: "Exporter l’analyse JSON", exact: true })
+    .first()
+    .click();
+  const exported = JSON.parse(
+    await readFile((await (await download).path())!, "utf8"),
+  );
+  expect(exported.results).toMatchObject({
+    active: 2,
+    inactive: 1,
+    complete: true,
+    totalEdits: 3,
+  });
+  expect(exported.question.days).toBe(30);
+  expect(
+    exported.cohort.every(
+      (a: { warnings: string[] }) => a.warnings.length === 0,
+    ),
+  ).toBe(true);
+  expect(collectionCalls).toEqual([]);
+  expect(modelCalls).toBe(4);
 });

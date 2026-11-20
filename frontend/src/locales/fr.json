@@ -313,7 +313,7 @@
   "noParticipantsResults": "Aucun participant ne correspond aux filtres actuels. Les données ont été conservées. Revenez au paramétrage pour vérifier les dates de l’action, la fenêtre des nouveaux comptes et les exclusions.",
   "participantTableHelp": "« Contributions après l’action » compte les créations ou modifications éligibles observées pour chaque compte, même lorsqu’il est exclu du bilan. Les graphiques et totaux utilisent uniquement les participants retenus.",
   "confirmEventDates": "Confirmez ou remplacez les dates de l’événement fournies par le Dashboard avant la collecte.",
-  "eventDatesHelp": "Saisissez le début et la fin de l’événement ici, avant la collecte. Pour un événement d’une journée, indiquez la même date dans les deux champs. Ces dates servent uniquement à cette analyse : le Dashboard reste inchangé et aucun droit d’administration n’est nécessaire. Les contributions seront suivies après la fin de l’événement jusqu’à aujourd’hui.",
+  "eventDatesHelp": "Saisissez le début et la fin réels de l’action avant la collecte. Pour une action d’une journée, indiquez la même date dans les deux champs. Ces dates servent uniquement à cette analyse : la source reste inchangée et aucun droit d’administration n’est nécessaire. Les contributions seront suivies après la fin de l’action.",
   "dashboardDatesQuestion": "Les dates du Dashboard correspondent-elles à l’événement ?",
   "useDashboardDates": "Oui, utiliser ces dates",
   "customEventDates": "Non, saisir les dates réelles ci-dessous",
@@ -427,7 +427,8 @@
     "contributions_desc": "Plus de contributions d’abord",
     "contributions_asc": "Moins de contributions d’abord",
     "last_desc": "Dernière contribution récente",
-    "last_asc": "Dernière contribution ancienne"
+    "last_asc": "Dernière contribution ancienne",
+    "by": "Trier par {{column}}"
   },
   "deleted": {
     "title": "Contributions sur des articles ensuite supprimés",
@@ -565,10 +566,12 @@
       "western_africa": "Afrique de l’Ouest",
       "southern_africa": "Afrique australe",
       "central_africa": "Afrique centrale"
-    }
+    },
+    "independent": "Cette analyse bêta est facultative. Une panne du modèle thématique ne bloque pas le comptage des contributions ni le calcul de rétention.",
+    "enterprise": "Wikimédia Enterprise fournit notamment les catégories des articles. Son schéma documenté ne propose pas d’équivalent direct aux 64 thèmes de ce modèle ; changer d’API ne garantit donc pas un meilleur classement.",
+    "enterpriseLink": "Consulter l’accès Enterprise pour Toolforge"
   },
   "newAccounts": {
-    "source": "Nouvelle source d’import",
     "title": "Nouveaux inscrits sur Wikipédia en français",
     "intro": "Constituez un groupe à partir du journal public de création des comptes.",
     "open": "Choisir les dates de création",
@@ -625,7 +628,6 @@
     "automationHelp": "Les comptes identifiés comme bots sont exclus par défaut. Cette case, cochée par défaut, retire aussi du calcul les modifications marquées bot ou automatisées faites par les autres comptes.",
     "preparationProgress": "Recherche des projets de contribution : {{done}} sur {{total}} comptes examinés.",
     "progressRefresh": "Les compteurs sont actualisés toutes les deux secondes. Un appel à une source publique peut prendre plus de temps.",
-    "durationInfo": "Info : prévoyez environ 17 minutes pour examiner les projets de contribution de 1 000 comptes, puis un temps supplémentaire pour récupérer leurs modifications. Estimation indicative, selon la réponse des API.",
     "fileLimit": "Fichiers TXT et CSV acceptés jusqu’à 50 Mo.",
     "allProjects": "{{count}} projets publics du catalogue seront observés, dans toutes leurs langues. Seuls les projets où le compte possède des contributions sont interrogés.",
     "resultTitle": "Combien de nouveaux inscrits ont contribué ?",
@@ -656,6 +658,32 @@
     "familyHelp": "Nombre de comptes ayant fait au moins une modification, par famille de projets. Les pourcentages portent sur tous les comptes retenus. Un compte peut contribuer sur plusieurs projets.",
     "accountUnit": "Comptes",
     "percentageAccounts": "Pourcentage des {{count}} comptes retenus.",
-    "invalidFile": "Le fichier de cohorte est invalide. Utilisez le CSV exporté par le module, sans modifier ses dates ni ses identifiants."
+    "invalidFile": "Le fichier de cohorte est invalide. Utilisez le CSV exporté par le module, sans modifier ses dates ni ses identifiants.",
+    "sameDay": "Les contributions sont comptées dès l’instant de création de chaque compte, y compris le jour même. Le suivi ne commence pas à J+1."
+  },
+  "eventRegistration": {
+    "intro": "Importez les participants publics d’un événement utilisant CampaignEvents.",
+    "url": "Lien de la page de l’événement ou de Special:EventDetails",
+    "privacy": "Seules les inscriptions publiques sont importées. Les organisateurs sont repérés et exclus par défaut ; vous pouvez les réintégrer.",
+    "apiLink": "Consulter l’API CampaignEvents",
+    "invalid": "Indiquez le lien HTTPS d’un événement sur un projet Wikimédia.",
+    "failed": "L’import s’est arrêté. Vérifiez que le lien mène à une page avec Event Registration, puis reprenez ou changez de lien.",
+    "progress": "Import en cours : {{count}} participants publics identifiables ; {{organizers}} organisateurs repérés.",
+    "loaded": "Import terminé : {{count}} participants publics identifiables ; {{organizers}} organisateurs exclus par défaut.",
+    "load": "Charger les participants publics",
+    "resume": "Reprendre l’import",
+    "use": "Utiliser cette liste",
+    "change": "Changer de lien",
+    "unavailable": "Entrées publiques sans compte identifiable : {{count}}. Elles sont hors de la liste analysable.",
+    "dateCheck": "Event Registration indique un début le {{start_local}} et une fin le {{end_local}}, dans le fuseau {{timezone}}.",
+    "utcDates": "Dates proposées pour l’analyse en UTC : du {{start}} au {{end}}. Vérifiez la période réelle de l’action, qui peut différer de la période d’inscription.",
+    "datesQuestion": "Ces dates correspondent-elles à l’action que vous voulez analyser ?",
+    "future": "Cet événement n’est pas encore terminé. Le suivi après l’événement pourra être réalisé après sa fin. Corrigez les dates uniquement si celles fournies sont inexactes.",
+    "originsHelp": "Choisissez les projets de l’action. La page d’inscription peut être hébergée sur Meta sans que les contributions aient lieu sur Meta. Les projets déclarés sont proposés et restent modifiables.",
+    "resultSource": "Source : inscriptions publiques Event Registration. Les inscriptions privées ne font pas partie de ce groupe."
+  },
+  "contributorList": {
+    "count_one": "{{count}} compte a contribué",
+    "count": "{{count}} comptes ont contribué"
   }
 }

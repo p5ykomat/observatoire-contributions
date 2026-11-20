@@ -29,6 +29,8 @@ import { QualificationTable } from "./components/QualificationTable";
 import { ProjectPicker } from "./components/ProjectPicker";
 import { SelectionReview } from "./components/SelectionReview";
 import { NewAccountsImport } from "./components/NewAccountsImport";
+import { EventRegistrationImport } from "./components/EventRegistrationImport";
+import type { EventRegistrationImport as EventImportState } from "./eventRegistrationImporter";
 import { ObservationSettings } from "./components/ObservationSettings";
 import {
   PRESET_PROJECTS,
@@ -54,7 +56,7 @@ export default function App() {
     [csv, setCSV] = useState<string[][]>([]),
     [column, setColumn] = useState(0),
     [exclusions, setExclusions] = useState(""),
-    [dashboardDates, setDashboardDates] = useState<{
+    [providedDates, setProvidedDates] = useState<{
       start: string;
       end: string;
     } | null>(null),
@@ -76,6 +78,14 @@ export default function App() {
     setS((previous) => ({
       ...previous,
       params: { ...previous.params, ...patch },
+      ...(previous.event_registration && ("start" in patch || "end" in patch)
+        ? {
+            event_registration: {
+              ...previous.event_registration,
+              dates_confirmed: true,
+            },
+          }
+        : {}),
     }));
   async function perform(fn: () => Promise<void>) {
     const current = generation.current;
@@ -111,7 +121,7 @@ export default function App() {
       setCSV([]);
       setError("");
       setNotice("");
-      setDashboardDates(null);
+      setProvidedDates(null);
       setDateChoice("");
     } catch (e) {
       setError((e as Error).message);
@@ -119,7 +129,7 @@ export default function App() {
   }
   function importRegistrations(data: RegistrationImport) {
     const base = emptySession();
-    setDashboardDates(null);
+    setProvidedDates(null);
     setDateChoice("");
     setPendingExclusions({});
     setExclusions("");
@@ -153,6 +163,34 @@ export default function App() {
         families: ["*"],
         wikipedia_languages: ["*"],
         projects: [...PRESET_PROJECTS],
+      },
+    });
+  }
+  function importEventRegistration(data: EventImportState) {
+    if (!data.event || data.phase !== "complete") return;
+    collector.current?.stop();
+    setPendingExclusions({});
+    setExclusions("");
+    setNotice("");
+    setError("");
+    setProvidedDates({ start: data.event.start, end: data.event.end });
+    setDateChoice("");
+    customScopeInitialized.current = false;
+    const base = emptySession();
+    setS({
+      ...base,
+      catalog: s.catalog,
+      cohort: data.accounts,
+      stage: 1,
+      event_registration: { ...data.event, unavailable: data.unavailable },
+      params: {
+        ...base.params,
+        title: data.event.title,
+        start: "",
+        end: "",
+        origins: data.event.projects,
+        projects: [],
+        scope: "all",
       },
     });
   }
@@ -226,7 +264,7 @@ export default function App() {
       );
   }
   async function launch(recollect = false) {
-    if (dashboardDates && !dateChoice) throw new Error(t("confirmEventDates"));
+    if (providedDates && !dateChoice) throw new Error(t("confirmEventDates"));
     validateDates();
     if (!aggregate(s).n) throw new Error(t("zeroSelection"));
     const session = structuredClone(s);
@@ -323,7 +361,7 @@ export default function App() {
         : "",
     }));
     const home = data.home_wiki;
-    setDashboardDates({
+    setProvidedDates({
       start: data.start?.slice(0, 10) ?? "",
       end: data.end?.slice(0, 10) ?? "",
     });
@@ -428,7 +466,7 @@ export default function App() {
     setCsvHeader(true);
     setExclusions("");
     customScopeInitialized.current = false;
-    setDashboardDates(null);
+    setProvidedDates(null);
     setDateChoice("");
     setNotice("");
     setError("");
@@ -441,7 +479,8 @@ export default function App() {
     resetCancelButton.current?.focus();
   }
   function projectPicker(key: "origins" | "projects") {
-    const fixed = key === "origins" && dashboardDates !== null;
+    const fixed =
+      key === "origins" && providedDates !== null && !s.event_registration;
     return (
       <ProjectPicker
         title={key}
@@ -454,7 +493,13 @@ export default function App() {
         }
         selected={s.params[key]}
         readOnly={fixed}
-        help={fixed ? "dashboardOriginProjectsHelp" : undefined}
+        help={
+          fixed
+            ? "dashboardOriginProjectsHelp"
+            : s.event_registration && key === "origins"
+              ? "eventRegistration.originsHelp"
+              : undefined
+        }
         change={(ids) => {
           if (key === "projects") customScopeInitialized.current = true;
           params({ [key]: ids });
@@ -494,25 +539,42 @@ export default function App() {
   const eventDates = (
     <fieldset>
       <legend>{t("eventDatesTitle")}</legend>
-      {dashboardDates && <p>{t("dashboardDateCheck", dashboardDates)}</p>}
+      {providedDates && (
+        <p>
+          {s.event_registration
+            ? t("eventRegistration.dateCheck", { ...s.event_registration })
+            : t("dashboardDateCheck", providedDates)}
+        </p>
+      )}
+      {s.event_registration && (
+        <p className="hint">
+          {t("eventRegistration.utcDates", { ...s.event_registration })}
+        </p>
+      )}
       <p className="hint">{t("eventDatesHelp")}</p>
-      {dashboardDates && (
+      {providedDates && (
         <div>
-          <p>{t("dashboardDatesQuestion")}</p>
+          <p>
+            {t(
+              s.event_registration
+                ? "eventRegistration.datesQuestion"
+                : "dashboardDatesQuestion",
+            )}
+          </p>
           <label className="check">
             <input
               type="radio"
               name="event-date-source"
               checked={dateChoice === "provided"}
               disabled={
-                !dashboardDates.start ||
-                !dashboardDates.end ||
-                dashboardDates.end > today() ||
-                dashboardDates.start > dashboardDates.end
+                !providedDates.start ||
+                !providedDates.end ||
+                providedDates.end > today() ||
+                providedDates.start > providedDates.end
               }
               onChange={() => {
                 setDateChoice("provided");
-                params(dashboardDates);
+                params(providedDates);
               }}
             />
             {t("useDashboardDates")}
@@ -522,12 +584,27 @@ export default function App() {
               type="radio"
               name="event-date-source"
               checked={dateChoice === "custom"}
-              onChange={() => setDateChoice("custom")}
+              onChange={() => {
+                setDateChoice("custom");
+                if (s.event_registration)
+                  update({
+                    event_registration: {
+                      ...s.event_registration,
+                      dates_confirmed: true,
+                    },
+                  });
+              }}
             />
             {t("customEventDates")}
           </label>
-          {dashboardDates.end > today() && (
-            <p className="hint">{t("futureDashboardDates")}</p>
+          {providedDates.end > today() && (
+            <p className="hint">
+              {t(
+                s.event_registration
+                  ? "eventRegistration.future"
+                  : "futureDashboardDates",
+              )}
+            </p>
           )}
         </div>
       )}
@@ -540,7 +617,7 @@ export default function App() {
             max={today()}
             onChange={(e) => {
               params({ start: e.target.value });
-              if (dashboardDates) setDateChoice("custom");
+              if (providedDates) setDateChoice("custom");
             }}
           />
         </label>
@@ -552,7 +629,7 @@ export default function App() {
             max={today()}
             onChange={(e) => {
               params({ end: e.target.value });
-              if (dashboardDates) setDateChoice("custom");
+              if (providedDates) setDateChoice("custom");
             }}
           />
         </label>
@@ -695,6 +772,7 @@ export default function App() {
                   {t("importDashboard")}
                 </button>
               </section>
+              <EventRegistrationImport onImport={importEventRegistration} />
               <NewAccountsImport onImport={importRegistrations} />
               <section className="panel">
                 <h2>{t("archive")}</h2>
@@ -713,10 +791,21 @@ export default function App() {
                           : "all";
                       imported.params.creation_restriction = false;
                       collector.current?.stop();
-                      setDashboardDates(null);
+                      setProvidedDates(
+                        imported.event_registration
+                          ? {
+                              start: imported.event_registration.start,
+                              end: imported.event_registration.end,
+                            }
+                          : null,
+                      );
                       customScopeInitialized.current =
                         imported.params.scope === "custom";
-                      setDateChoice("");
+                      setDateChoice(
+                        imported.event_registration?.dates_confirmed
+                          ? "custom"
+                          : "",
+                      );
                       setPendingExclusions({});
                       setExclusions("");
                       setS(imported);
@@ -994,9 +1083,6 @@ export default function App() {
               </label>
               <p className="hint">{t("automationHelp")}</p>
             </fieldset>
-            {s.new_accounts && (
-              <p className="notice">{t("newAccounts.durationInfo")}</p>
-            )}
             <div className="actions">
               <button
                 className="primary"
@@ -1058,9 +1144,6 @@ export default function App() {
               })}
             </p>
             <p className="hint">{t("newAccounts.progressRefresh")}</p>
-            {s.new_accounts && (
-              <p className="notice">{t("newAccounts.durationInfo")}</p>
-            )}
             <progress
               aria-label={t("steps.2")}
               max={retainedAccounts.length}

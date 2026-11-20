@@ -42,6 +42,23 @@ class Transport:
     async def post(self, url: str, body: dict[str, Any], provider: str) -> dict:
         return await self.request("POST", url, provider, json=body)
 
+    async def get_list(self, url: str, params: dict[str, Any] | None, provider: str) -> list:
+        return await self.request("GET", url, provider, params=params, expect_list=True)
+
+    async def get_html(self, url: str, provider: str) -> str:
+        async with self.mediawiki_slots:
+            try:
+                response = await self.client.get(url, headers={"Accept": "text/html"})
+            except (httpx.TimeoutException, httpx.NetworkError):
+                raise SourceError(provider, 504) from None
+        if response.status_code != 200:
+            raise SourceError(
+                provider, response.status_code, retry_delay(response.headers.get("Retry-After"))
+            )
+        if len(response.content) > 8_000_000:
+            raise SourceError(provider, 502)
+        return response.text
+
     async def request(
         self,
         method: str,
@@ -50,7 +67,8 @@ class Transport:
         *,
         params: dict[str, Any] | None = None,
         json: dict[str, Any] | None = None,
-    ) -> dict:
+        expect_list: bool = False,
+    ) -> Any:
         # One external call per transport request. Retrying and waiting occur in the browser,
         # keeping functions short even when Retry-After spans several minutes.
         public = bool(
@@ -75,9 +93,9 @@ class Transport:
             data = response.json()
         except ValueError:
             raise SourceError(provider, 502) from None
-        if not isinstance(data, dict):
+        if not isinstance(data, list if expect_list else dict):
             raise SourceError(provider, 502)
-        if "error" in data:
+        if isinstance(data, dict) and "error" in data:
             error = data["error"]
             if not isinstance(error, dict):
                 raise SourceError(provider, 502)

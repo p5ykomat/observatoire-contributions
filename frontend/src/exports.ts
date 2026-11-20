@@ -70,6 +70,9 @@ export function exportCSV(s: Session, summary = false) {
     include_deleted_creations: r.question.include_deleted_creations,
     include_deleted_modifications: r.question.include_deleted_modifications,
     archived_contributions_collected: r.deleted.collected,
+    ...(s.event_registration
+      ? { event_registration: s.event_registration }
+      : {}),
     ...(s.new_accounts
       ? {
           registration_cohort: s.new_accounts,
@@ -184,6 +187,10 @@ export function makePDF(s: Session, nominative = false) {
     t("fup.families." + value, { defaultValue: value });
   heading(t("app"));
   paragraph(s.params.title || t("title"));
+  if (s.event_registration) {
+    paragraph(t("eventRegistration.resultSource"));
+    paragraph(s.event_registration.url);
+  }
   paragraph(
     s.new_accounts
       ? t("newAccounts.cohortDates", s.new_accounts)

@@ -181,6 +181,7 @@ test("complete registration flow, Commons only, zero edits, textual report and a
   await expect(
     page.getByText(/Parmi les 2 comptes retenus.*1 \(50 %\)/),
   ).toBeVisible();
+  await page.locator(".contributors-summary").click();
   await expect(
     page.getByRole("button", { name: "NewRegistered", exact: true }),
   ).toBeVisible();

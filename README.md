@@ -18,9 +18,15 @@ An independent tool for studying public contribution activity after a training s
 
 Changing language preserves the current analysis. Reinstating excluded accounts or expanding the selection may require additional collection. Changing collection dates or projects requires a new collection.
 
+## Event Registration
+
+An event page or `Special:EventDetails` URL imports public registrations through the [CampaignEvents API](https://www.mediawiki.org/w/index.php?api=campaignevents.v0&title=Special:RestSandbox). All available pages are followed. Private registrations are never requested. Public organizers are identified separately and excluded by default; they can be included again. Failures preserve imported pages so the import can resume in the same page.
+
+In **Configure**, confirm or correct the dates before collection. Supplied times and their time zone are shown and converted to UTC for analysis. Corrections do not change the source event. Declared contribution projects are suggested and remain editable: hosting registration on Meta does not make Meta a contribution project. JSON preserves provenance, original dates and analysis-date confirmation; CSV and PDF identify the public source.
+
 ## New registrations on French Wikipedia
 
-The fourth import source loads a single registration day or an inclusive date range. It pages the public log actions `create`, `create2` and `byemail`, using the target account rather than the log actor. IPs, active and expired temporary accounts, and automatic attachments are excluded. Local IDs follow renamed accounts when available.
+This import source loads a single registration day or an inclusive date range. It pages the public log actions `create`, `create2` and `byemail`, using the target account rather than the log actor. IPs, active and expired temporary accounts, and automatic attachments are excluded. Local IDs follow renamed accounts when available.
 
 The supported format starts on **18 April 2006**, the first full UTC day after `create` appeared on French Wikipedia. Older entries exist from September 2005 but are not supported. Later CentralAuth unification dates do not replace local signup dates. Earlier global registration dates reveal pre-existing accounts. Hidden entries and unavailable accounts are reported outside the analysable cohort.
 
@@ -28,7 +34,7 @@ Observe each account from its own signup until a chosen date, or during a date r
 
 Accounts identified as bots are excluded by default. The checkbox excluding edits flagged as bot or automated is visible and enabled by default in this flow. Collection counters refresh every two seconds without additional network requests. Discovering the projects where accounts contribute is shown separately from the number of fully processed accounts.
 
-The interface shows a fixed estimate of about 17 minutes to examine the contribution projects of 1,000 accounts. This assumes one one-second request per account, or 16 minutes 40 seconds, and is not a measured duration. Retrieving edits adds a variable amount of time.
+Contributions count from each account’s exact creation timestamp, including the same day, rather than starting on the next day. Collection time depends on projects and account activity; no fixed duration is advertised.
 
 Text reports, charts and exports use the same criteria. Accounts with zero edits stay in the denominator. Accounts contributing to several projects count once overall. At least one edit during an interval does not establish continuous activity or retention on the deadline itself.
 
@@ -36,7 +42,7 @@ Every log page is followed and accounts are verified in batches of 50. Pause and
 
 ## Understanding the results
 
-The contributor list appears above article topics and can be sorted by contribution count or last contribution date in either direction.
+The contributor list appears above article topics, starts collapsed and initially shows only accounts with contributions. Column headings sort by username, contribution count or latest contribution date in either direction. Showing all accounts remains available to inspect inactivity and exclusions.
 
 Collection automatically retrieves public metadata for Wikipedia article creations and edits that were subsequently deleted. Two result checkboxes are enabled by default. Toggling them separately recalculates counts, percentages, lists and charts without additional requests. Reverted edits on articles that still exist remain counted independently of these checkboxes.
 
@@ -57,6 +63,14 @@ Results are cumulative from the day after the event ends through the chosen dead
 Future deadlines and incomplete collections do not produce a definitive rate. Missing observations are not treated as proof of inactivity. Dates use UTC. Methodology version: **1.0**.
 
 Contributions are public revisions, not the amount of text added or a complete inventory of uploads and logs. Reverted revisions remain observed revisions. New account status depends on the selected creation window; a username containing “bot” is not sufficient to identify a bot.
+
+## Enterprise and article topics
+
+The [official access policy](https://meta.wikimedia.org/wiki/Wikimedia_Enterprise/Access) allows Enterprise calls without an account or authorization header from Toolforge, Cloud VPS and PAWS servers. This does not automatically apply to browsers, local computers or Vercel. Access from Toolforge still needs verification on the actual deployment.
+
+The [Enterprise schema](https://enterprise.wikimedia.com/docs/data-dictionary/) provides structured content, editorial categories, metadata and revision signals. Categories are not the 64 labels of `outlink-topic-model`; no equivalent field was found in the consulted schema. Enterprise therefore does not automatically replace Lift Wing or historical contribution lookup per account. A topic-service failure leaves account counts, contribution totals, filters and retention exports usable.
+
+Questions prepared for the Foundation, without automatically sending them: is there an Enterprise topic classifier comparable to `outlink-topic-model`? Which model, version, taxonomy and languages does it use, including for recent articles? Which rate and caching rules apply to unauthenticated Toolforge access? Categories could provide optional enrichment, but grouping them into broad topics would require a separate evaluated method.
 
 ## Sources and limits
 

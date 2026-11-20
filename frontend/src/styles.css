@@ -406,6 +406,75 @@ input[type="file"] {
   grid-template-columns: 1fr 1fr;
   gap: 24px;
 }
+.contributor-disclosure > .contributors-summary {
+  display: list-item;
+  cursor: pointer;
+  padding: 8px 0;
+}
+.contributors-summary h2 {
+  display: inline;
+  margin-inline-end: 16px;
+}
+.contributors-summary > span {
+  display: inline-block;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 400;
+}
+.contributor-list-content {
+  padding-block-start: 20px;
+}
+.column-sort {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-height: 40px;
+  padding: 8px;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  text-align: start;
+  font-weight: 700;
+  white-space: normal;
+}
+.column-sort:hover {
+  background: var(--surface, #f4f7f6);
+}
+.column-sort > span {
+  font-size: 18px;
+  flex: none;
+}
+@media (max-width: 760px) {
+  .contributor-disclosure .followup-table thead,
+  .contributor-disclosure .followup-table thead tr {
+    display: block;
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip-path: none;
+  }
+  .contributor-disclosure .followup-table thead tr {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-block-end: 12px;
+  }
+  .contributor-disclosure .followup-table thead th:not(.sortable-column) {
+    display: none;
+  }
+  .contributor-disclosure .followup-table thead th.sortable-column {
+    display: block;
+    padding: 0;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+  }
+  .contributors-summary h2 {
+    font-size: 18px;
+  }
+}
 .divider {
   border-top: 1px solid var(--line);
   margin: 32px 0;

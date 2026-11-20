@@ -133,12 +133,33 @@ export interface Session {
   question?: FollowupQuestion;
   article_topics?: Record<string, ArticleTopics>;
   deleted_collection_version?: 1;
+  event_registration?: EventRegistrationSource;
   new_accounts?: {
     start: string;
     end: string;
     unavailable: number;
     excluded: number;
   };
+}
+export interface EventRegistrationSource {
+  id: number;
+  project: string;
+  title: string;
+  url: string;
+  page_url: string;
+  start: string;
+  end: string;
+  starts_at: string;
+  ends_at: string;
+  timezone: string;
+  start_local: string;
+  end_local: string;
+  projects: string[];
+  all_projects: boolean;
+  public_only: true;
+  dates_confirmed: boolean;
+  unavailable: number;
+  imported_at: string;
 }
 export interface FollowupQuestion {
   days: number | "today";

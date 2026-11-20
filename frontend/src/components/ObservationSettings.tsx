@@ -60,6 +60,9 @@ export function ObservationSettings({
           ))}
         </div>
         <p className="hint">{t("newAccounts.modeHelp." + o.mode)}</p>
+        {o.mode === "registration" && (
+          <p className="hint">{t("newAccounts.sameDay")}</p>
+        )}
         <div className="form-grid date-grid">
           {o.mode === "period" && (
             <label>
